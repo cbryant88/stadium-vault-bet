@@ -3,10 +3,32 @@ import { Badge } from "@/components/ui/badge";
 import { Clock, TrendingUp, Users, Loader2 } from "lucide-react";
 import { useBetting } from "@/hooks/useBetting";
 import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 export const Scoreboard = () => {
   const { games, loading, error } = useBetting();
   const [selectedGame, setSelectedGame] = useState<string | null>(null);
+  const { toast } = useToast();
+
+  // Function to add bet to betting slip
+  const addBetToSlip = (gameId: string, team: string, opponent: string, odds: number, teamSelection: 'home' | 'away' | 'draw') => {
+    // Create a custom event to communicate with BettingSlip component
+    const betEvent = new CustomEvent('addBetToSlip', {
+      detail: {
+        gameId,
+        team,
+        opponent,
+        odds,
+        teamSelection
+      }
+    });
+    window.dispatchEvent(betEvent);
+    
+    toast({
+      title: "Bet Added to Slip",
+      description: `${team} vs ${opponent} bet added to your betting slip`,
+    });
+  };
 
   if (loading) {
     return (
@@ -106,19 +128,13 @@ export const Scoreboard = () => {
             {/* Quick Bet Actions */}
             <div className="grid grid-cols-2 gap-2 pt-2 border-t border-border/50">
               <button 
-                onClick={() => {
-                  // This would trigger adding to betting slip
-                  console.log(`Add ${game.homeTeam} bet to slip`);
-                }}
+                onClick={() => addBetToSlip(game.id, game.homeTeam, game.awayTeam, game.odds.home, 'home')}
                 className="bg-stadium-glow/10 hover:bg-stadium-glow/20 border border-stadium-glow/30 rounded-md py-2 px-3 text-sm font-medium transition-colors"
               >
                 Bet {game.homeTeam}
               </button>
               <button 
-                onClick={() => {
-                  // This would trigger adding to betting slip
-                  console.log(`Add ${game.awayTeam} bet to slip`);
-                }}
+                onClick={() => addBetToSlip(game.id, game.awayTeam, game.homeTeam, game.odds.away, 'away')}
                 className="bg-accent/10 hover:bg-accent/20 border border-accent/30 rounded-md py-2 px-3 text-sm font-medium transition-colors"
               >
                 Bet {game.awayTeam}

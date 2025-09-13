@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAccount } from 'wagmi';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -28,19 +28,42 @@ export const BettingSlip = () => {
   const [isPlacingBets, setIsPlacingBets] = useState(false);
   const { toast } = useToast();
 
-  // Add bet to slip
-  const addBetToSlip = (gameId: string, team: string, opponent: string, odds: number, teamSelection: 'home' | 'away' | 'draw') => {
-    const newBet: BettingSlipBet = {
-      id: `slip_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      gameId,
-      team,
-      opponent,
-      odds,
-      amount: 0,
-      teamSelection
+  // Listen for bet events from Scoreboard
+  useEffect(() => {
+    const handleAddBetToSlip = (event: CustomEvent) => {
+      const { gameId, team, opponent, odds, teamSelection } = event.detail;
+      
+      // Check if bet already exists for this game and team
+      const existingBet = bets.find(bet => bet.gameId === gameId && bet.teamSelection === teamSelection);
+      if (existingBet) {
+        toast({
+          title: "Bet Already Added",
+          description: "This bet is already in your betting slip",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const newBet: BettingSlipBet = {
+        id: `slip_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        gameId,
+        team,
+        opponent,
+        odds,
+        amount: 0,
+        teamSelection
+      };
+      
+      setBets(prev => [...prev, newBet]);
     };
-    setBets(prev => [...prev, newBet]);
-  };
+
+    window.addEventListener('addBetToSlip', handleAddBetToSlip as EventListener);
+    
+    return () => {
+      window.removeEventListener('addBetToSlip', handleAddBetToSlip as EventListener);
+    };
+  }, [bets, toast]);
+
 
   const totalStake = bets.reduce((sum, bet) => sum + bet.amount, 0);
   const totalPayout = bets.reduce((sum, bet) => sum + (bet.amount * bet.odds), 0);

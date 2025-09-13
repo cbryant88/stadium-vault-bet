@@ -3,6 +3,7 @@ import { WalletConnect } from "@/components/WalletConnect";
 import { Scoreboard } from "@/components/Scoreboard";
 import { BettingSlip } from "@/components/BettingSlip";
 import { UserBets } from "@/components/UserBets";
+import { TestBettingFlow } from "@/components/TestBettingFlow";
 
 const Index = () => {
   return (
@@ -16,6 +17,7 @@ const Index = () => {
             <WalletConnect />
             <BettingSlip />
             <UserBets />
+            <TestBettingFlow />
           </div>
 
           {/* Right Column - Scoreboard */}
