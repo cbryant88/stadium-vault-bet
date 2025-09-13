@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAccount } from 'wagmi';
-import { contractService, Game, Bet, BettingPool } from '@/lib/contractService';
+import { fheContractService, FHEGame, FHEBet } from '@/lib/fheContractService';
 
 export interface BettingState {
-  games: Game[];
-  userBets: Bet[];
+  games: FHEGame[];
+  userBets: FHEBet[];
   loading: boolean;
   error: string | null;
 }
@@ -22,7 +22,7 @@ export const useBetting = () => {
   const loadGames = useCallback(async () => {
     setState(prev => ({ ...prev, loading: true, error: null }));
     try {
-      const games = await contractService.getGames();
+      const games = await fheContractService.getGames();
       setState(prev => ({ ...prev, games, loading: false }));
     } catch (error) {
       setState(prev => ({ 
@@ -39,7 +39,7 @@ export const useBetting = () => {
     
     setState(prev => ({ ...prev, loading: true, error: null }));
     try {
-      const userBets = await contractService.getUserBets(address);
+      const userBets = await fheContractService.getUserBets(address);
       setState(prev => ({ ...prev, userBets, loading: false }));
     } catch (error) {
       setState(prev => ({ 
@@ -62,11 +62,16 @@ export const useBetting = () => {
 
     setState(prev => ({ ...prev, loading: true, error: null }));
     try {
-      const result = await contractService.placeBet(gameId, teamSelection, amount, address);
+      const result = await fheContractService.placeBet(gameId, teamSelection, amount, address);
       if (result.success) {
-        // Reload games and user bets
-        await Promise.all([loadGames(), loadUserBets()]);
         setState(prev => ({ ...prev, loading: false }));
+        // Reload data after successful bet placement
+        setTimeout(() => {
+          loadGames();
+          if (address && isConnected) {
+            loadUserBets();
+          }
+        }, 100);
         return result;
       } else {
         setState(prev => ({ 
@@ -87,21 +92,11 @@ export const useBetting = () => {
   }, [address, isConnected, loadGames, loadUserBets]);
 
   // Get betting pool for a game
-  const getBettingPool = useCallback(async (gameId: string): Promise<BettingPool | null> => {
+  const getBettingPool = useCallback(async (gameId: string) => {
     try {
-      return await contractService.getBettingPool(gameId);
+      return await fheContractService.getBettingPool(gameId);
     } catch (error) {
       console.error('Failed to get betting pool:', error);
-      return null;
-    }
-  }, []);
-
-  // Get bet result
-  const getBetResult = useCallback(async (betId: string) => {
-    try {
-      return await contractService.getBetResult(betId);
-    } catch (error) {
-      console.error('Failed to get bet result:', error);
       return null;
     }
   }, []);
@@ -123,7 +118,6 @@ export const useBetting = () => {
     ...state,
     placeBet,
     getBettingPool,
-    getBetResult,
     loadGames,
     loadUserBets,
     isConnected
