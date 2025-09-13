@@ -7,30 +7,40 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { useBetting } from "@/hooks/useBetting";
 import { Trash2, Lock, Shield, Calculator, AlertTriangle, CheckCircle, Loader2 } from "lucide-react";
 
-interface Bet {
+interface BettingSlipBet {
   id: string;
+  gameId: string;
   team: string;
   opponent: string;
   odds: number;
   amount: number;
+  teamSelection: 'home' | 'away' | 'draw';
 }
 
 export const BettingSlip = () => {
   const { isConnected } = useAccount();
-  const [bets, setBets] = useState<Bet[]>([
-    {
-      id: "1",
-      team: "Lakers",
-      opponent: "vs Warriors",
-      odds: 1.85,
-      amount: 50
-    }
-  ]);
+  const { placeBet, userBets, loading } = useBetting();
+  const [bets, setBets] = useState<BettingSlipBet[]>([]);
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
   const [isPlacingBets, setIsPlacingBets] = useState(false);
   const { toast } = useToast();
+
+  // Add bet to slip
+  const addBetToSlip = (gameId: string, team: string, opponent: string, odds: number, teamSelection: 'home' | 'away' | 'draw') => {
+    const newBet: BettingSlipBet = {
+      id: `slip_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      gameId,
+      team,
+      opponent,
+      odds,
+      amount: 0,
+      teamSelection
+    };
+    setBets(prev => [...prev, newBet]);
+  };
 
   const totalStake = bets.reduce((sum, bet) => sum + bet.amount, 0);
   const totalPayout = bets.reduce((sum, bet) => sum + (bet.amount * bet.odds), 0);
@@ -68,22 +78,36 @@ export const BettingSlip = () => {
     setIsConfirmDialogOpen(false);
     
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Place each bet
+      const results = await Promise.all(
+        bets.map(bet => 
+          placeBet(bet.gameId, bet.teamSelection, bet.amount)
+        )
+      );
       
-      // Simulate successful bet placement
-      toast({
-        title: "Bets Placed Successfully!",
-        description: `${bets.length} encrypted bet${bets.length > 1 ? 's' : ''} submitted to the blockchain`,
-      });
+      // Check if all bets were successful
+      const failedBets = results.filter(result => !result.success);
       
-      // Clear betting slip after successful placement
-      setBets([]);
+      if (failedBets.length === 0) {
+        toast({
+          title: "Bets Placed Successfully!",
+          description: `${bets.length} encrypted bet${bets.length > 1 ? 's' : ''} submitted to the blockchain`,
+        });
+        
+        // Clear betting slip after successful placement
+        setBets([]);
+      } else {
+        toast({
+          title: "Some Bets Failed",
+          description: `${failedBets.length} out of ${bets.length} bets failed to place`,
+          variant: "destructive",
+        });
+      }
       
     } catch (error) {
       toast({
         title: "Bet Placement Failed",
-        description: "Please try again or contact support if the issue persists",
+        description: error instanceof Error ? error.message : "Please try again or contact support if the issue persists",
         variant: "destructive",
       });
     } finally {

@@ -2,6 +2,7 @@ import { Header } from "@/components/Header";
 import { WalletConnect } from "@/components/WalletConnect";
 import { Scoreboard } from "@/components/Scoreboard";
 import { BettingSlip } from "@/components/BettingSlip";
+import { UserBets } from "@/components/UserBets";
 
 const Index = () => {
   return (
@@ -10,10 +11,11 @@ const Index = () => {
       
       <div className="container mx-auto px-4 py-8">
         <div className="grid lg:grid-cols-3 gap-8">
-          {/* Left Column - Wallet & Betting Slip */}
+          {/* Left Column - Wallet, Betting Slip & User Bets */}
           <div className="space-y-6">
             <WalletConnect />
             <BettingSlip />
+            <UserBets />
           </div>
 
           {/* Right Column - Scoreboard */}
