@@ -35,9 +35,9 @@
 
    ```
    VITE_CHAIN_ID=11155111
-   VITE_RPC_URL=https://sepolia.infura.io/v3/b18fb7e6ca7045ac83c41157ab93f990
-   VITE_WALLET_CONNECT_PROJECT_ID=2ec9743d0d0cd7fb94dee1a7e6d33475
-   VITE_INFURA_API_KEY=b18fb7e6ca7045ac83c41157ab93f990
+   VITE_RPC_URL=https://sepolia.infura.io/v3/YOUR_INFURA_API_KEY
+   VITE_WALLET_CONNECT_PROJECT_ID=YOUR_WALLET_CONNECT_PROJECT_ID
+   VITE_INFURA_API_KEY=YOUR_INFURA_API_KEY
    ```
 
    **Important**: Make sure to add these for all environments (Production, Preview, Development)
@@ -86,9 +86,9 @@
 ### Environment Variables Explained
 
 - **VITE_CHAIN_ID**: Sepolia testnet chain ID (11155111)
-- **VITE_RPC_URL**: Infura RPC endpoint for Sepolia
-- **VITE_WALLET_CONNECT_PROJECT_ID**: WalletConnect project ID for wallet connections
-- **VITE_INFURA_API_KEY**: Infura API key for blockchain interactions
+- **VITE_RPC_URL**: Your Infura RPC endpoint for Sepolia
+- **VITE_WALLET_CONNECT_PROJECT_ID**: Your WalletConnect project ID for wallet connections
+- **VITE_INFURA_API_KEY**: Your Infura API key for blockchain interactions
 
 ### Build Configuration
 

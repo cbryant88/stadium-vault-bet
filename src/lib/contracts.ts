@@ -12,6 +12,6 @@ export const CONTRACT_ABIS = {
 
 // Network configuration
 export const NETWORK_CONFIG = {
-  chainId: 11155111, // Sepolia
-  rpcUrl: 'https://sepolia.infura.io/v3/b18fb7e6ca7045ac83c41157ab93f990',
+  chainId: Number(import.meta.env.VITE_CHAIN_ID) || 11155111, // Sepolia
+  rpcUrl: import.meta.env.VITE_RPC_URL || 'https://sepolia.infura.io/v3/YOUR_INFURA_API_KEY',
 } as const;
