@@ -28,38 +28,38 @@
   <!-- Gradients -->
   <defs>
     <linearGradient id="stadiumGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#1a1a2e;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#16213e;stop-opacity:1" />
+      <stop offset="0%" stopColor="#1a1a2e" stopOpacity="1" />
+      <stop offset="100%" stopColor="#16213e" stopOpacity="1" />
     </linearGradient>
     
     <linearGradient id="fieldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#0f3460;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#16537e;stop-opacity:1" />
+      <stop offset="0%" stopColor="#0f3460" stopOpacity="1" />
+      <stop offset="100%" stopColor="#16537e" stopOpacity="1" />
     </linearGradient>
     
     <linearGradient id="structureGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#2c3e50;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#34495e;stop-opacity:1" />
+      <stop offset="0%" stopColor="#2c3e50" stopOpacity="1" />
+      <stop offset="100%" stopColor="#34495e" stopOpacity="1" />
     </linearGradient>
     
     <linearGradient id="chipGradient1" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#e74c3c;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#c0392b;stop-opacity:1" />
+      <stop offset="0%" stopColor="#e74c3c" stopOpacity="1" />
+      <stop offset="100%" stopColor="#c0392b" stopOpacity="1" />
     </linearGradient>
     
     <linearGradient id="chipGradient2" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#27ae60;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#229954;stop-opacity:1" />
+      <stop offset="0%" stopColor="#27ae60" stopOpacity="1" />
+      <stop offset="100%" stopColor="#229954" stopOpacity="1" />
     </linearGradient>
     
     <linearGradient id="chipGradient3" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#f39c12;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#e67e22;stop-opacity:1" />
+      <stop offset="0%" stopColor="#f39c12" stopOpacity="1" />
+      <stop offset="100%" stopColor="#e67e22" stopOpacity="1" />
     </linearGradient>
     
     <linearGradient id="shieldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#4A90E2;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#357ABD;stop-opacity:1" />
+      <stop offset="0%" stopColor="#4A90E2" stopOpacity="1" />
+      <stop offset="100%" stopColor="#357ABD" stopOpacity="1" />
     </linearGradient>
   </defs>
 </svg>
