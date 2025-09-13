@@ -7,7 +7,64 @@ export const CONTRACT_ADDRESSES = {
 
 // Contract ABIs will be generated after compilation
 export const CONTRACT_ABIS = {
-  StadiumVaultBet: [] as const,
+  StadiumVaultBet: [
+    // GameCreated event
+    {
+      "anonymous": false,
+      "inputs": [
+        {"indexed": true, "name": "gameId", "type": "uint256"},
+        {"indexed": false, "name": "homeTeam", "type": "string"},
+        {"indexed": false, "name": "awayTeam", "type": "string"}
+      ],
+      "name": "GameCreated",
+      "type": "event"
+    },
+    // BetPlaced event
+    {
+      "anonymous": false,
+      "inputs": [
+        {"indexed": true, "name": "betId", "type": "uint256"},
+        {"indexed": true, "name": "gameId", "type": "uint256"},
+        {"indexed": true, "name": "bettor", "type": "address"},
+        {"indexed": false, "name": "amount", "type": "uint32"}
+      ],
+      "name": "BetPlaced",
+      "type": "event"
+    },
+    // placeBet function
+    {
+      "inputs": [
+        {"name": "gameId", "type": "uint256"},
+        {"name": "amount", "type": "bytes"},
+        {"name": "teamSelection", "type": "bytes"},
+        {"name": "inputProof", "type": "bytes"}
+      ],
+      "name": "placeBet",
+      "outputs": [{"name": "", "type": "uint256"}],
+      "stateMutability": "payable",
+      "type": "function"
+    },
+    // getGameInfo function
+    {
+      "inputs": [{"name": "gameId", "type": "uint256"}],
+      "name": "getGameInfo",
+      "outputs": [
+        {"name": "homeTeam", "type": "string"},
+        {"name": "awayTeam", "type": "string"},
+        {"name": "homeScore", "type": "uint8"},
+        {"name": "awayScore", "type": "uint8"},
+        {"name": "homeOdds", "type": "uint8"},
+        {"name": "awayOdds", "type": "uint8"},
+        {"name": "drawOdds", "type": "uint8"},
+        {"name": "isActive", "type": "bool"},
+        {"name": "isFinished", "type": "bool"},
+        {"name": "startTime", "type": "uint256"},
+        {"name": "endTime", "type": "uint256"}
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ] as const,
 } as const;
 
 // Network configuration
