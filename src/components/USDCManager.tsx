@@ -106,7 +106,7 @@ export const USDCManager: React.FC<USDCManagerProps> = ({ onBalanceUpdate }) => 
               type="number"
               value={faucetAmount}
               onChange={(e) => setFaucetAmount(e.target.value)}
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 placeholder:text-gray-500"
               placeholder="Amount to claim"
               min="1"
               max="1000"

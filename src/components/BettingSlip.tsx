@@ -23,7 +23,7 @@ interface BettingSlipBet {
 
 export const BettingSlip = () => {
   const { isConnected } = useAccount();
-  const { placeBet, userBets, loading, fheReady } = useBetting();
+  const { placeBet, userBets, loading, fheReady, fheLoading, fheError } = useBetting();
   const [bets, setBets] = useState<BettingSlipBet[]>([]);
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
   const [isPlacingBets, setIsPlacingBets] = useState(false);
@@ -158,7 +158,7 @@ export const BettingSlip = () => {
     );
   }
 
-  if (!fheReady) {
+  if (fheLoading || !fheReady) {
     return (
       <Card className="bg-gradient-scoreboard border-stadium-glow/30 p-6 text-center">
         <div className="space-y-4">
@@ -166,10 +166,23 @@ export const BettingSlip = () => {
             <Shield className="w-8 h-8 text-muted-foreground" />
           </div>
           <div>
-            <h3 className="text-lg font-semibold mb-2">Initializing FHE Encryption</h3>
+            <h3 className="text-lg font-semibold mb-2">
+              {fheLoading ? 'Initializing FHE Encryption' : 'FHE Encryption Error'}
+            </h3>
             <p className="text-sm text-muted-foreground">
-              Setting up fully homomorphic encryption for secure betting...
+              {fheLoading 
+                ? 'Setting up fully homomorphic encryption for secure betting...'
+                : fheError || 'Failed to initialize encryption service. Please refresh the page.'
+              }
             </p>
+            {fheError && (
+              <button 
+                onClick={() => window.location.reload()}
+                className="mt-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              >
+                Retry
+              </button>
+            )}
           </div>
         </div>
       </Card>
@@ -228,7 +241,7 @@ export const BettingSlip = () => {
                     type="number"
                     value={bet.amount}
                     onChange={(e) => updateBetAmount(bet.id, Number(e.target.value))}
-                    className="h-8 text-sm"
+                    className="h-8 text-sm bg-white text-gray-900 placeholder:text-gray-500"
                     min="1"
                     max="10000"
                     placeholder="Enter stake amount"
