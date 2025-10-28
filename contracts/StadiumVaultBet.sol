@@ -2,16 +2,20 @@
 pragma solidity ^0.8.24;
 
 import { SepoliaConfig } from "@fhevm/solidity/config/ZamaConfig.sol";
-import { euint32, externalEuint32, euint8, ebool, FHE } from "@fhevm/solidity/lib/FHE.sol";
+import { euint32, externalEuint32, euint8, externalEuint8, ebool, externalEbool, FHE } from "@fhevm/solidity/lib/FHE.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 contract StadiumVaultBet is SepoliaConfig {
     using FHE for *;
+    using SafeERC20 for IERC20;
     
     struct Bet {
         euint32 betId;
         euint32 amount;
         euint32 odds;
         euint8 teamSelection; // 0: home, 1: away, 2: draw
+        ebool isWinner;
         bool isActive;
         bool isSettled;
         address bettor;
@@ -28,8 +32,8 @@ contract StadiumVaultBet is SepoliaConfig {
         euint32 homeOdds;
         euint32 awayOdds;
         euint32 drawOdds;
-        bool isActive;
-        bool isFinished;
+        ebool isActive;
+        ebool isFinished;
         uint256 startTime;
         uint256 endTime;
     }
@@ -40,6 +44,9 @@ contract StadiumVaultBet is SepoliaConfig {
         euint32 homeBets;
         euint32 awayBets;
         euint32 drawBets;
+        euint32 homeTotalAmount;
+        euint32 awayTotalAmount;
+        euint32 drawTotalAmount;
     }
     
     mapping(uint256 => Game) public games;
@@ -48,22 +55,30 @@ contract StadiumVaultBet is SepoliaConfig {
     mapping(address => euint32) public userReputation;
     mapping(address => euint32) public userTotalBets;
     mapping(address => euint32) public userTotalWinnings;
+    mapping(address => euint32) public userWinCount;
     
     uint256 public gameCounter;
     uint256 public betCounter;
     
     address public owner;
     address public oracle;
+    IERC20 public usdcToken;
+    
+    // FHE Constants (USDC amounts with 6 decimals)
+    uint256 public constant MIN_BET_AMOUNT = 1000000; // 1 USDC
+    uint256 public constant MAX_BET_AMOUNT = 100000000; // 100 USDC
     
     event GameCreated(uint256 indexed gameId, string homeTeam, string awayTeam);
-    event BetPlaced(uint256 indexed betId, uint256 indexed gameId, address indexed bettor, uint32 amount);
-    event GameSettled(uint256 indexed gameId, uint32 homeScore, uint32 awayScore);
-    event BetSettled(uint256 indexed betId, bool isWinner, uint32 payout);
-    event ReputationUpdated(address indexed user, uint32 reputation);
+    event BetPlaced(uint256 indexed betId, uint256 indexed gameId, address indexed bettor);
+    event GameSettled(uint256 indexed gameId);
+    event BetSettled(uint256 indexed betId, bool isWinner);
+    event ReputationUpdated(address indexed user);
+    event OddsUpdated(uint256 indexed gameId);
     
-    constructor(address _oracle) {
+    constructor(address _oracle, address _usdcToken) {
         owner = msg.sender;
         oracle = _oracle;
+        usdcToken = IERC20(_usdcToken);
     }
     
     modifier onlyOwner() {
@@ -73,6 +88,16 @@ contract StadiumVaultBet is SepoliaConfig {
     
     modifier onlyOracle() {
         require(msg.sender == oracle, "Only oracle can call this function");
+        _;
+    }
+    
+    modifier validGame(uint256 gameId) {
+        require(gameId < gameCounter, "Game does not exist");
+        _;
+    }
+    
+    modifier validBet(uint256 betId) {
+        require(betId < betCounter, "Bet does not exist");
         _;
     }
     
@@ -90,7 +115,7 @@ contract StadiumVaultBet is SepoliaConfig {
         uint256 gameId = gameCounter++;
         
         games[gameId] = Game({
-            gameId: FHE.asEuint32(0), // Will be set properly later
+            gameId: FHE.asEuint32(uint32(gameId)),
             homeTeam: _homeTeam,
             awayTeam: _awayTeam,
             homeScore: FHE.asEuint32(0),
@@ -98,8 +123,8 @@ contract StadiumVaultBet is SepoliaConfig {
             homeOdds: FHE.asEuint32(0), // Will be set via FHE operations
             awayOdds: FHE.asEuint32(0), // Will be set via FHE operations
             drawOdds: FHE.asEuint32(0), // Will be set via FHE operations
-            isActive: true,
-            isFinished: false,
+            isActive: FHE.asEbool(true),
+            isFinished: FHE.asEbool(false),
             startTime: _startTime,
             endTime: _endTime
         });
@@ -109,7 +134,10 @@ contract StadiumVaultBet is SepoliaConfig {
             totalAmount: FHE.asEuint32(0),
             homeBets: FHE.asEuint32(0),
             awayBets: FHE.asEuint32(0),
-            drawBets: FHE.asEuint32(0)
+            drawBets: FHE.asEuint32(0),
+            homeTotalAmount: FHE.asEuint32(0),
+            awayTotalAmount: FHE.asEuint32(0),
+            drawTotalAmount: FHE.asEuint32(0)
         });
         
         emit GameCreated(gameId, _homeTeam, _awayTeam);
@@ -122,18 +150,24 @@ contract StadiumVaultBet is SepoliaConfig {
         externalEuint32 awayOdds,
         externalEuint32 drawOdds,
         bytes calldata inputProof
-    ) public onlyOracle {
-        require(games[gameId].isActive, "Game is not active");
-        require(block.timestamp < games[gameId].endTime, "Game has ended");
+    ) public onlyOracle validGame(gameId) {
+        Game storage game = games[gameId];
         
         // Convert external euint32 to internal euint32
         euint32 internalHomeOdds = FHE.fromExternal(homeOdds, inputProof);
         euint32 internalAwayOdds = FHE.fromExternal(awayOdds, inputProof);
         euint32 internalDrawOdds = FHE.fromExternal(drawOdds, inputProof);
         
-        games[gameId].homeOdds = internalHomeOdds;
-        games[gameId].awayOdds = internalAwayOdds;
-        games[gameId].drawOdds = internalDrawOdds;
+        game.homeOdds = internalHomeOdds;
+        game.awayOdds = internalAwayOdds;
+        game.drawOdds = internalDrawOdds;
+        
+        // Set ACL permissions for odds
+        FHE.allowThis(game.homeOdds);
+        FHE.allowThis(game.awayOdds);
+        FHE.allowThis(game.drawOdds);
+        
+        emit OddsUpdated(gameId);
     }
     
     function placeBet(
@@ -141,10 +175,9 @@ contract StadiumVaultBet is SepoliaConfig {
         externalEuint32 amount,
         externalEuint8 teamSelection,
         bytes calldata inputProof
-    ) public payable returns (uint256) {
-        require(games[gameId].isActive, "Game is not active");
-        require(block.timestamp < games[gameId].endTime, "Game has ended");
-        require(msg.value > 0, "Bet amount must be greater than 0");
+    ) public validGame(gameId) returns (uint256) {
+        Game storage game = games[gameId];
+        require(block.timestamp < game.endTime, "Game has ended");
         
         uint256 betId = betCounter++;
         
@@ -152,11 +185,29 @@ contract StadiumVaultBet is SepoliaConfig {
         euint32 internalAmount = FHE.fromExternal(amount, inputProof);
         euint8 internalTeamSelection = FHE.fromExternal(teamSelection, inputProof);
         
+        // Transfer USDC from bettor to contract (vault)
+        // Note: We need to decrypt the amount for the transfer
+        // For now, we'll use a fixed amount and handle FHE decryption in the frontend
+        uint256 usdcAmount = MIN_BET_AMOUNT; // Default to minimum bet
+        usdcToken.safeTransferFrom(msg.sender, address(this), usdcAmount);
+        
+        // Get the appropriate odds based on team selection
+        euint32 selectedOdds = FHE.select(
+            FHE.eq(internalTeamSelection, FHE.asEuint8(0)), // home
+            game.homeOdds,
+            FHE.select(
+                FHE.eq(internalTeamSelection, FHE.asEuint8(1)), // away
+                game.awayOdds,
+                game.drawOdds // draw
+            )
+        );
+        
         bets[betId] = Bet({
-            betId: FHE.asEuint32(0), // Will be set properly later
+            betId: FHE.asEuint32(uint32(betId)),
             amount: internalAmount,
-            odds: FHE.asEuint32(0), // Will be set based on team selection
+            odds: selectedOdds,
             teamSelection: internalTeamSelection,
+            isWinner: FHE.asEbool(false),
             isActive: true,
             isSettled: false,
             bettor: msg.sender,
@@ -169,10 +220,33 @@ contract StadiumVaultBet is SepoliaConfig {
         pool.totalBets = FHE.add(pool.totalBets, FHE.asEuint32(1));
         pool.totalAmount = FHE.add(pool.totalAmount, internalAmount);
         
+        // Update team-specific statistics
+        ebool isHome = FHE.eq(internalTeamSelection, FHE.asEuint8(0));
+        ebool isAway = FHE.eq(internalTeamSelection, FHE.asEuint8(1));
+        ebool isDraw = FHE.eq(internalTeamSelection, FHE.asEuint8(2));
+        
+        pool.homeBets = FHE.add(pool.homeBets, FHE.select(isHome, FHE.asEuint32(1), FHE.asEuint32(0)));
+        pool.awayBets = FHE.add(pool.awayBets, FHE.select(isAway, FHE.asEuint32(1), FHE.asEuint32(0)));
+        pool.drawBets = FHE.add(pool.drawBets, FHE.select(isDraw, FHE.asEuint32(1), FHE.asEuint32(0)));
+        
+        pool.homeTotalAmount = FHE.add(pool.homeTotalAmount, FHE.select(isHome, internalAmount, FHE.asEuint32(0)));
+        pool.awayTotalAmount = FHE.add(pool.awayTotalAmount, FHE.select(isAway, internalAmount, FHE.asEuint32(0)));
+        pool.drawTotalAmount = FHE.add(pool.drawTotalAmount, FHE.select(isDraw, internalAmount, FHE.asEuint32(0)));
+        
         // Update user statistics
         userTotalBets[msg.sender] = FHE.add(userTotalBets[msg.sender], internalAmount);
         
-        emit BetPlaced(betId, gameId, msg.sender, 0); // Amount will be decrypted off-chain
+        // Set ACL permissions for bet data
+        FHE.allowThis(bets[betId].amount);
+        FHE.allowThis(bets[betId].odds);
+        FHE.allowThis(bets[betId].teamSelection);
+        FHE.allowThis(bets[betId].isWinner);
+        FHE.allow(bets[betId].amount, msg.sender);
+        FHE.allow(bets[betId].odds, msg.sender);
+        FHE.allow(bets[betId].teamSelection, msg.sender);
+        FHE.allow(bets[betId].isWinner, msg.sender);
+        
+        emit BetPlaced(betId, gameId, msg.sender);
         return betId;
     }
     
@@ -181,137 +255,165 @@ contract StadiumVaultBet is SepoliaConfig {
         externalEuint32 homeScore,
         externalEuint32 awayScore,
         bytes calldata inputProof
-    ) public onlyOracle {
-        require(games[gameId].isActive, "Game is not active");
-        require(block.timestamp >= games[gameId].endTime, "Game has not ended yet");
+    ) public onlyOracle validGame(gameId) {
+        Game storage game = games[gameId];
+        require(block.timestamp >= game.endTime, "Game has not ended yet");
         
         // Convert external scores to internal FHE values
         euint32 internalHomeScore = FHE.fromExternal(homeScore, inputProof);
         euint32 internalAwayScore = FHE.fromExternal(awayScore, inputProof);
         
-        games[gameId].homeScore = internalHomeScore;
-        games[gameId].awayScore = internalAwayScore;
-        games[gameId].isFinished = true;
-        games[gameId].isActive = false;
+        game.homeScore = internalHomeScore;
+        game.awayScore = internalAwayScore;
+        game.isFinished = FHE.asEbool(true);
+        game.isActive = FHE.asEbool(false);
         
-        emit GameSettled(gameId, 0, 0); // Scores will be decrypted off-chain
+        // Set ACL permissions for scores
+        FHE.allowThis(game.homeScore);
+        FHE.allowThis(game.awayScore);
+        
+        emit GameSettled(gameId);
         
         // Settle all bets for this game
         _settleBetsForGame(gameId, internalHomeScore, internalAwayScore);
     }
     
     function _settleBetsForGame(uint256 gameId, euint32 homeScore, euint32 awayScore) internal {
-        // This is a simplified version - in practice, you'd need to iterate through all bets
+        // This function would iterate through all bets for the game
         // and determine winners based on encrypted score comparison
-        
         // For now, we'll emit events for bet settlement
         // The actual settlement logic would need to be implemented based on specific requirements
+        
+        // In a real implementation, you would:
+        // 1. Iterate through all bets for this game
+        // 2. Compare encrypted scores to determine winners
+        // 3. Update bet status and calculate payouts
+        // 4. Transfer winnings to winners
     }
     
-    function settleBet(uint256 betId, bool isWinner, externalEuint32 payout, bytes calldata inputProof) public onlyOracle {
-        require(bets[betId].isActive, "Bet is not active");
-        require(!bets[betId].isSettled, "Bet is already settled");
+    function settleBet(
+        uint256 betId, 
+        externalEbool isWinner, 
+        externalEuint32 payout, 
+        bytes calldata inputProof
+    ) public onlyOracle validBet(betId) {
+        Bet storage bet = bets[betId];
+        require(bet.isActive, "Bet is not active");
+        require(!bet.isSettled, "Bet is already settled");
         
         euint32 internalPayout = FHE.fromExternal(payout, inputProof);
+        ebool internalIsWinner = FHE.fromExternal(isWinner, inputProof);
         
-        bets[betId].isSettled = true;
-        bets[betId].isActive = false;
+        bet.isSettled = true;
+        bet.isActive = false;
+        bet.isWinner = internalIsWinner;
         
-        if (isWinner) {
-            userTotalWinnings[bets[betId].bettor] = FHE.add(userTotalWinnings[bets[betId].bettor], internalPayout);
-            
-            // Transfer winnings to bettor
-            payable(bets[betId].bettor).transfer(0); // Amount will be determined off-chain
-        }
+        // Update user statistics
+        userTotalWinnings[bet.bettor] = FHE.add(
+            userTotalWinnings[bet.bettor], 
+            FHE.select(internalIsWinner, internalPayout, FHE.asEuint32(0))
+        );
         
-        emit BetSettled(betId, isWinner, 0); // Payout will be decrypted off-chain
+        userWinCount[bet.bettor] = FHE.add(
+            userWinCount[bet.bettor],
+            FHE.select(internalIsWinner, FHE.asEuint32(1), FHE.asEuint32(0))
+        );
+        
+        // Set ACL permissions for updated data
+        FHE.allowThis(bet.isWinner);
+        FHE.allow(bet.isWinner, bet.bettor);
+        
+        emit BetSettled(betId, false); // Winner status will be decrypted off-chain
+        
+        // Transfer winnings to bettor (amount determined off-chain)
+        // Note: In a real implementation, this would be handled off-chain
+        // as FHE decryption cannot be performed directly in the contract
     }
     
-    function updateUserReputation(address user, euint32 reputation) public onlyOracle {
+    function updateUserReputation(address user, externalEuint32 reputation, bytes calldata inputProof) public onlyOracle {
         require(user != address(0), "Invalid user address");
         
-        userReputation[user] = reputation;
-        emit ReputationUpdated(user, 0); // Reputation will be decrypted off-chain
+        euint32 internalReputation = FHE.fromExternal(reputation, inputProof);
+        userReputation[user] = internalReputation;
+        
+        // Set ACL permissions
+        FHE.allowThis(userReputation[user]);
+        FHE.allow(userReputation[user], user);
+        
+        emit ReputationUpdated(user);
     }
     
-    function getGameInfo(uint256 gameId) public view returns (
-        string memory homeTeam,
-        string memory awayTeam,
-        uint8 homeScore,
-        uint8 awayScore,
-        uint8 homeOdds,
-        uint8 awayOdds,
-        uint8 drawOdds,
-        bool isActive,
-        bool isFinished,
-        uint256 startTime,
-        uint256 endTime
+    // View functions for encrypted data (will be decrypted off-chain)
+    function getGameEncryptedData(uint256 gameId) public view validGame(gameId) returns (
+        bytes32 homeScore,
+        bytes32 awayScore,
+        bytes32 homeOdds,
+        bytes32 awayOdds,
+        bytes32 drawOdds,
+        bytes32 isActive,
+        bytes32 isFinished
     ) {
         Game storage game = games[gameId];
         return (
-            game.homeTeam,
-            game.awayTeam,
-            0, // FHE.decrypt(game.homeScore) - will be decrypted off-chain
-            0, // FHE.decrypt(game.awayScore) - will be decrypted off-chain
-            0, // FHE.decrypt(game.homeOdds) - will be decrypted off-chain
-            0, // FHE.decrypt(game.awayOdds) - will be decrypted off-chain
-            0, // FHE.decrypt(game.drawOdds) - will be decrypted off-chain
-            game.isActive,
-            game.isFinished,
-            game.startTime,
-            game.endTime
+            FHE.toBytes32(game.homeScore),
+            FHE.toBytes32(game.awayScore),
+            FHE.toBytes32(game.homeOdds),
+            FHE.toBytes32(game.awayOdds),
+            FHE.toBytes32(game.drawOdds),
+            FHE.toBytes32(game.isActive),
+            FHE.toBytes32(game.isFinished)
         );
     }
     
-    function getBetInfo(uint256 betId) public view returns (
-        uint8 amount,
-        uint8 odds,
-        uint8 teamSelection,
-        bool isActive,
-        bool isSettled,
-        address bettor,
-        uint256 gameId,
-        uint256 timestamp
+    function getBetEncryptedData(uint256 betId) public view validBet(betId) returns (
+        bytes32 amount,
+        bytes32 odds,
+        bytes32 teamSelection,
+        bytes32 isWinner
     ) {
         Bet storage bet = bets[betId];
         return (
-            0, // FHE.decrypt(bet.amount) - will be decrypted off-chain
-            0, // FHE.decrypt(bet.odds) - will be decrypted off-chain
-            0, // FHE.decrypt(bet.teamSelection) - will be decrypted off-chain
-            bet.isActive,
-            bet.isSettled,
-            bet.bettor,
-            bet.gameId,
-            bet.timestamp
+            FHE.toBytes32(bet.amount),
+            FHE.toBytes32(bet.odds),
+            FHE.toBytes32(bet.teamSelection),
+            FHE.toBytes32(bet.isWinner)
         );
     }
     
-    function getUserStats(address user) public view returns (
-        uint8 totalBets,
-        uint8 totalWinnings,
-        uint8 reputation
-    ) {
-        return (
-            0, // FHE.decrypt(userTotalBets[user]) - will be decrypted off-chain
-            0, // FHE.decrypt(userTotalWinnings[user]) - will be decrypted off-chain
-            0  // FHE.decrypt(userReputation[user]) - will be decrypted off-chain
-        );
-    }
-    
-    function getBettingPoolInfo(uint256 gameId) public view returns (
-        uint8 totalBets,
-        uint8 totalAmount,
-        uint8 homeBets,
-        uint8 awayBets,
-        uint8 drawBets
+    function getBettingPoolEncryptedData(uint256 gameId) public view validGame(gameId) returns (
+        bytes32 totalBets,
+        bytes32 totalAmount,
+        bytes32 homeBets,
+        bytes32 awayBets,
+        bytes32 drawBets,
+        bytes32 homeTotalAmount,
+        bytes32 awayTotalAmount,
+        bytes32 drawTotalAmount
     ) {
         BettingPool storage pool = bettingPools[gameId];
         return (
-            0, // FHE.decrypt(pool.totalBets) - will be decrypted off-chain
-            0, // FHE.decrypt(pool.totalAmount) - will be decrypted off-chain
-            0, // FHE.decrypt(pool.homeBets) - will be decrypted off-chain
-            0, // FHE.decrypt(pool.awayBets) - will be decrypted off-chain
-            0  // FHE.decrypt(pool.drawBets) - will be decrypted off-chain
+            FHE.toBytes32(pool.totalBets),
+            FHE.toBytes32(pool.totalAmount),
+            FHE.toBytes32(pool.homeBets),
+            FHE.toBytes32(pool.awayBets),
+            FHE.toBytes32(pool.drawBets),
+            FHE.toBytes32(pool.homeTotalAmount),
+            FHE.toBytes32(pool.awayTotalAmount),
+            FHE.toBytes32(pool.drawTotalAmount)
+        );
+    }
+    
+    function getUserEncryptedStats(address user) public view returns (
+        bytes32 totalBets,
+        bytes32 totalWinnings,
+        bytes32 winCount,
+        bytes32 reputation
+    ) {
+        return (
+            FHE.toBytes32(userTotalBets[user]),
+            FHE.toBytes32(userTotalWinnings[user]),
+            FHE.toBytes32(userWinCount[user]),
+            FHE.toBytes32(userReputation[user])
         );
     }
     
@@ -323,5 +425,68 @@ contract StadiumVaultBet is SepoliaConfig {
     function setOracle(address _oracle) public onlyOwner {
         require(_oracle != address(0), "Invalid oracle address");
         oracle = _oracle;
+    }
+    
+    // Public view functions for non-encrypted data
+    function getGameBasicInfo(uint256 gameId) public view validGame(gameId) returns (
+        string memory homeTeam,
+        string memory awayTeam,
+        uint256 startTime,
+        uint256 endTime
+    ) {
+        Game storage game = games[gameId];
+        return (
+            game.homeTeam,
+            game.awayTeam,
+            game.startTime,
+            game.endTime
+        );
+    }
+    
+    function getBetBasicInfo(uint256 betId) public view validBet(betId) returns (
+        bool isActive,
+        bool isSettled,
+        address bettor,
+        uint256 gameId,
+        uint256 timestamp
+    ) {
+        Bet storage bet = bets[betId];
+        return (
+            bet.isActive,
+            bet.isSettled,
+            bet.bettor,
+            bet.gameId,
+            bet.timestamp
+        );
+    }
+    
+    // Utility functions
+    function getGameCount() public view returns (uint256) {
+        return gameCounter;
+    }
+    
+    function getBetCount() public view returns (uint256) {
+        return betCounter;
+    }
+    
+    function getContractBalance() public view returns (uint256) {
+        return address(this).balance;
+    }
+    
+    // USDC related functions
+    function getUSDCBalance() public view returns (uint256) {
+        return usdcToken.balanceOf(address(this));
+    }
+    
+    function getUserUSDCBalance(address user) public view returns (uint256) {
+        return usdcToken.balanceOf(user);
+    }
+    
+    function approveUSDC(address spender, uint256 amount) public {
+        usdcToken.approve(spender, amount);
+    }
+    
+    function withdrawUSDC(uint256 amount) public onlyOwner {
+        usdcToken.safeTransfer(owner, amount);
     }
 }

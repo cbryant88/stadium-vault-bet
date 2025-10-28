@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAccount } from 'wagmi';
+import { useZamaInstance } from './useZamaInstance';
+import { useEthersSigner } from './useEthersSigner';
 import { fheContractService, FHEGame, FHEBet } from '@/lib/fheContractService';
 
 export interface BettingState {
@@ -11,6 +13,8 @@ export interface BettingState {
 
 export const useBetting = () => {
   const { address, isConnected } = useAccount();
+  const { instance } = useZamaInstance();
+  const { signerPromise } = useEthersSigner();
   const [state, setState] = useState<BettingState>({
     games: [],
     userBets: [],
@@ -50,7 +54,7 @@ export const useBetting = () => {
     }
   }, [address, isConnected]);
 
-  // Place a bet
+  // Place a bet with FHE encryption
   const placeBet = useCallback(async (
     gameId: string,
     teamSelection: 'home' | 'away' | 'draw',
@@ -60,9 +64,25 @@ export const useBetting = () => {
       throw new Error('Wallet not connected');
     }
 
+    if (!instance) {
+      throw new Error('FHE encryption service not ready');
+    }
+
+    if (!signerPromise) {
+      throw new Error('Wallet signer not available');
+    }
+
     setState(prev => ({ ...prev, loading: true, error: null }));
     try {
-      const result = await fheContractService.placeBet(gameId, teamSelection, amount, address);
+      const result = await fheContractService.placeBetWithFHE(
+        gameId, 
+        teamSelection, 
+        amount, 
+        address, 
+        instance, 
+        signerPromise
+      );
+      
       if (result.success) {
         setState(prev => ({ ...prev, loading: false }));
         // Reload data after successful bet placement
@@ -89,7 +109,7 @@ export const useBetting = () => {
       }));
       throw error;
     }
-  }, [address, isConnected, loadGames, loadUserBets]);
+  }, [address, isConnected, instance, signerPromise, loadGames, loadUserBets]);
 
   // Get betting pool for a game
   const getBettingPool = useCallback(async (gameId: string) => {
@@ -120,6 +140,7 @@ export const useBetting = () => {
     getBettingPool,
     loadGames,
     loadUserBets,
-    isConnected
+    isConnected,
+    fheReady: !!instance
   };
 };

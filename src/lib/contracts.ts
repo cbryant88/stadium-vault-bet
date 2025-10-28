@@ -1,74 +1,150 @@
-import { Address } from 'viem';
-
-// Contract addresses (will be updated after deployment)
+// Auto-generated contract addresses and ABIs
 export const CONTRACT_ADDRESSES = {
-  StadiumVaultBet: '0x0000000000000000000000000000000000000000' as Address,
-} as const;
+  StadiumVaultBet: "0xe968f0e119fb5a70613dc191e5B530bB93547579",
+  TestUSDC: "0xF6BBdD17D256aDBFA681886429481d7C7600a47F",
+};
 
-// Contract ABIs will be generated after compilation
 export const CONTRACT_ABIS = {
   StadiumVaultBet: [
-    // GameCreated event
     {
-      "anonymous": false,
       "inputs": [
-        {"indexed": true, "name": "gameId", "type": "uint256"},
-        {"indexed": false, "name": "homeTeam", "type": "string"},
-        {"indexed": false, "name": "awayTeam", "type": "string"}
+        {"internalType": "address", "name": "_oracle", "type": "address"},
+        {"internalType": "address", "name": "_usdcToken", "type": "address"}
       ],
-      "name": "GameCreated",
-      "type": "event"
+      "stateMutability": "nonpayable",
+      "type": "constructor"
     },
-    // BetPlaced event
     {
-      "anonymous": false,
-      "inputs": [
-        {"indexed": true, "name": "betId", "type": "uint256"},
-        {"indexed": true, "name": "gameId", "type": "uint256"},
-        {"indexed": true, "name": "bettor", "type": "address"},
-        {"indexed": false, "name": "amount", "type": "uint32"}
-      ],
-      "name": "BetPlaced",
-      "type": "event"
-    },
-    // placeBet function
-    {
-      "inputs": [
-        {"name": "gameId", "type": "uint256"},
-        {"name": "amount", "type": "bytes"},
-        {"name": "teamSelection", "type": "bytes"},
-        {"name": "inputProof", "type": "bytes"}
-      ],
-      "name": "placeBet",
-      "outputs": [{"name": "", "type": "uint256"}],
-      "stateMutability": "payable",
+      "inputs": [],
+      "name": "MIN_BET_AMOUNT",
+      "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+      "stateMutability": "view",
       "type": "function"
     },
-    // getGameInfo function
     {
-      "inputs": [{"name": "gameId", "type": "uint256"}],
-      "name": "getGameInfo",
-      "outputs": [
-        {"name": "homeTeam", "type": "string"},
-        {"name": "awayTeam", "type": "string"},
-        {"name": "homeScore", "type": "uint8"},
-        {"name": "awayScore", "type": "uint8"},
-        {"name": "homeOdds", "type": "uint8"},
-        {"name": "awayOdds", "type": "uint8"},
-        {"name": "drawOdds", "type": "uint8"},
-        {"name": "isActive", "type": "bool"},
-        {"name": "isFinished", "type": "bool"},
-        {"name": "startTime", "type": "uint256"},
-        {"name": "endTime", "type": "uint256"}
+      "inputs": [],
+      "name": "MAX_BET_AMOUNT",
+      "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {"internalType": "string", "name": "_homeTeam", "type": "string"},
+        {"internalType": "string", "name": "_awayTeam", "type": "string"},
+        {"internalType": "uint256", "name": "_startTime", "type": "uint256"},
+        {"internalType": "uint256", "name": "_endTime", "type": "uint256"}
       ],
+      "name": "createGame",
+      "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {"internalType": "uint256", "name": "gameId", "type": "uint256"},
+        {"internalType": "bytes32", "name": "amount", "type": "bytes32"},
+        {"internalType": "bytes32", "name": "teamSelection", "type": "bytes32"},
+        {"internalType": "bytes", "name": "inputProof", "type": "bytes"}
+      ],
+      "name": "placeBet",
+      "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getGameCount",
+      "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getBetCount",
+      "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getUSDCBalance",
+      "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [{"internalType": "address", "name": "user", "type": "address"}],
+      "name": "getUserUSDCBalance",
+      "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
       "stateMutability": "view",
       "type": "function"
     }
-  ] as const,
-} as const;
-
-// Network configuration
-export const NETWORK_CONFIG = {
-  chainId: Number(import.meta.env.VITE_CHAIN_ID) || 11155111, // Sepolia
-  rpcUrl: import.meta.env.VITE_RPC_URL || 'https://sepolia.infura.io/v3/YOUR_INFURA_API_KEY',
-} as const;
+  ],
+  TestUSDC: [
+    {
+      "inputs": [{"internalType": "address", "name": "initialOwner", "type": "address"}],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "inputs": [],
+      "name": "name",
+      "outputs": [{"internalType": "string", "name": "", "type": "string"}],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "symbol",
+      "outputs": [{"internalType": "string", "name": "", "type": "string"}],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "decimals",
+      "outputs": [{"internalType": "uint8", "name": "", "type": "uint8"}],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [{"internalType": "address", "name": "account", "type": "address"}],
+      "name": "balanceOf",
+      "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {"internalType": "address", "name": "to", "type": "address"},
+        {"internalType": "uint256", "name": "amount", "type": "uint256"}
+      ],
+      "name": "faucet",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {"internalType": "address", "name": "spender", "type": "address"},
+        {"internalType": "uint256", "name": "amount", "type": "uint256"}
+      ],
+      "name": "approve",
+      "outputs": [{"internalType": "bool", "name": "", "type": "bool"}],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {"internalType": "address", "name": "from", "type": "address"},
+        {"internalType": "address", "name": "to", "type": "address"},
+        {"internalType": "uint256", "name": "amount", "type": "uint256"}
+      ],
+      "name": "transferFrom",
+      "outputs": [{"internalType": "bool", "name": "", "type": "bool"}],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+};

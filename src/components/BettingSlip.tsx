@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useBetting } from "@/hooks/useBetting";
+import { USDCManager } from "./USDCManager";
 import { Trash2, Lock, Shield, Calculator, AlertTriangle, CheckCircle, Loader2 } from "lucide-react";
 
 interface BettingSlipBet {
@@ -22,10 +23,11 @@ interface BettingSlipBet {
 
 export const BettingSlip = () => {
   const { isConnected } = useAccount();
-  const { placeBet, userBets, loading } = useBetting();
+  const { placeBet, userBets, loading, fheReady } = useBetting();
   const [bets, setBets] = useState<BettingSlipBet[]>([]);
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
   const [isPlacingBets, setIsPlacingBets] = useState(false);
+  const [userUSDCBalance, setUserUSDCBalance] = useState<string>('0');
   const { toast } = useToast();
 
   // Listen for bet events from Scoreboard
@@ -156,17 +158,42 @@ export const BettingSlip = () => {
     );
   }
 
-  return (
-    <Card className="bg-gradient-scoreboard border-stadium-glow/20 shadow-scoreboard">
-      <div className="p-4 border-b border-border/50">
-        <div className="flex items-center gap-2">
-          <Shield className="w-5 h-5 text-stadium-glow" />
-          <h3 className="font-semibold">Encrypted Betting Slip</h3>
-          <Badge variant="secondary" className="bg-stadium-glow/10 text-stadium-glow text-xs">
-            FHE Protected
-          </Badge>
+  if (!fheReady) {
+    return (
+      <Card className="bg-gradient-scoreboard border-stadium-glow/30 p-6 text-center">
+        <div className="space-y-4">
+          <div className="w-16 h-16 bg-muted/20 rounded-full flex items-center justify-center mx-auto">
+            <Shield className="w-8 h-8 text-muted-foreground" />
+          </div>
+          <div>
+            <h3 className="text-lg font-semibold mb-2">Initializing FHE Encryption</h3>
+            <p className="text-sm text-muted-foreground">
+              Setting up fully homomorphic encryption for secure betting...
+            </p>
+          </div>
         </div>
-      </div>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* USDC Manager */}
+      <USDCManager onBalanceUpdate={setUserUSDCBalance} />
+      
+      <Card className="bg-gradient-scoreboard border-stadium-glow/20 shadow-scoreboard">
+        <div className="p-4 border-b border-border/50">
+          <div className="flex items-center gap-2">
+            <Shield className="w-5 h-5 text-stadium-glow" />
+            <h3 className="font-semibold">Encrypted Betting Slip</h3>
+            <Badge variant="secondary" className="bg-stadium-glow/10 text-stadium-glow text-xs">
+              FHE Protected
+            </Badge>
+          </div>
+          <div className="mt-2 text-sm text-muted-foreground">
+            Your USDC Balance: <span className="font-mono text-green-600">{userUSDCBalance} USDC</span>
+          </div>
+        </div>
 
       <div className="p-4 space-y-4">
         {bets.length === 0 ? (
@@ -314,6 +341,7 @@ export const BettingSlip = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </Card>
+      </Card>
+    </div>
   );
 };

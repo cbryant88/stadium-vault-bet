@@ -14,7 +14,9 @@
     "deploy:local": "hardhat run scripts/deploy.ts --network localhost"
   },
   "dependencies": {
+    "@fhevm/solidity": "^0.8.0",
     "@hookform/resolvers": "^3.10.0",
+    "@openzeppelin/contracts": "^5.4.0",
     "@radix-ui/react-accordion": "^1.2.11",
     "@radix-ui/react-alert-dialog": "^1.1.14",
     "@radix-ui/react-aspect-ratio": "^1.1.7",
@@ -44,6 +46,7 @@
     "@radix-ui/react-tooltip": "^1.2.7",
     "@rainbow-me/rainbowkit": "^2.2.8",
     "@tanstack/react-query": "^5.83.0",
+    "@zama-fhe/relayer-sdk": "^0.2.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
@@ -69,6 +72,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.32.0",
+    "@fhevm/hardhat-plugin": "^0.1.0",
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
     "@tailwindcss/typography": "^0.5.16",
     "@types/node": "^22.16.5",

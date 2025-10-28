@@ -1,239 +1,193 @@
-// FHE Contract Service for Stadium Vault Bet
-// This service handles interactions with the FHE encrypted smart contract
-
-import { Contract } from 'ethers';
+import { ethers } from 'ethers';
 import { CONTRACT_ADDRESSES, CONTRACT_ABIS } from './contracts';
+import type { FhevmInstance } from '@zama-fhe/relayer-sdk/bundle';
 
-export interface FHEGame {
-  id: string;
-  homeTeam: string;
-  awayTeam: string;
-  homeScore: number;
-  awayScore: number;
-  status: 'live' | 'upcoming' | 'finished';
-  timeRemaining?: string;
-  odds: {
-    home: number;
-    away: number;
-    draw?: number;
-  };
-  totalBets: number;
-  startTime: number;
-  endTime: number;
-}
-
-export interface FHEBet {
-  id: string;
-  gameId: string;
-  team: string;
-  opponent: string;
-  odds: number;
-  amount: number;
-  teamSelection: 'home' | 'away' | 'draw';
-  isActive: boolean;
-  isSettled: boolean;
-  timestamp: number;
-}
-
-class FHEContractService {
-  private contract: Contract | null = null;
-  private isInitialized = false;
+export class FheContractService {
+  private provider: ethers.Provider | null = null;
+  private signer: ethers.Signer | null = null;
 
   constructor() {
-    this.initializeContract();
+    this.initializeProvider();
   }
 
-  private async initializeContract() {
-    try {
-      // In a real implementation, this would initialize the contract
-      // with the deployed address and ABI
-      console.log('FHE Contract Service initialized');
-      this.isInitialized = true;
-    } catch (error) {
-      console.error('Failed to initialize FHE contract service:', error);
+  private async initializeProvider() {
+    if (typeof window !== 'undefined' && window.ethereum) {
+      this.provider = new ethers.BrowserProvider(window.ethereum);
+      this.signer = await this.provider.getSigner();
     }
   }
 
-  // Get all games from the contract
-  async getGames(): Promise<FHEGame[]> {
-    if (!this.isInitialized) {
-      throw new Error('Contract service not initialized');
-    }
-
-    try {
-      // In a real implementation, this would call the contract
-      // For now, return mock data that simulates FHE encrypted data
-      return [
-        {
-          id: "1",
-          homeTeam: "Lakers",
-          awayTeam: "Warriors",
-          homeScore: 95,
-          awayScore: 88,
-          status: "live",
-          timeRemaining: "4:32 Q3",
-          odds: { home: 1.85, away: 2.10 },
-          totalBets: 1247,
-          startTime: Date.now() - 3600000,
-          endTime: Date.now() + 1800000
-        },
-        {
-          id: "2",
-          homeTeam: "Cowboys",
-          awayTeam: "Giants",
-          homeScore: 21,
-          awayScore: 14,
-          status: "live",
-          timeRemaining: "12:45 Q2",
-          odds: { home: 1.65, away: 2.45 },
-          totalBets: 2856,
-          startTime: Date.now() - 1800000,
-          endTime: Date.now() + 3600000
-        },
-        {
-          id: "3",
-          homeTeam: "City",
-          awayTeam: "United",
-          homeScore: 0,
-          awayScore: 0,
-          status: "upcoming",
-          timeRemaining: "19:30 Today",
-          odds: { home: 2.20, away: 1.75, draw: 3.40 },
-          totalBets: 892,
-          startTime: Date.now() + 3600000,
-          endTime: Date.now() + 7200000
-        }
-      ];
-    } catch (error) {
-      console.error('Failed to get games from contract:', error);
-      throw error;
-    }
+  async getUSDCBalance(userAddress: string): Promise<string> {
+    if (!this.provider) throw new Error('Provider not initialized');
+    
+    const usdcContract = new ethers.Contract(
+      CONTRACT_ADDRESSES.TestUSDC,
+      CONTRACT_ABIS.TestUSDC,
+      this.provider
+    );
+    
+    const balance = await usdcContract.balanceOf(userAddress);
+    return ethers.formatUnits(balance, 6); // USDC has 6 decimals
   }
 
-  // Place a bet using FHE encryption
-  async placeBet(
-    gameId: string,
-    teamSelection: 'home' | 'away' | 'draw',
-    amount: number,
-    userAddress: string
-  ): Promise<{ success: boolean; betId?: string; error?: string }> {
-    if (!this.isInitialized) {
-      throw new Error('Contract service not initialized');
-    }
+  async getVaultUSDCBalance(): Promise<string> {
+    if (!this.provider) throw new Error('Provider not initialized');
+    
+    const stadiumContract = new ethers.Contract(
+      CONTRACT_ADDRESSES.StadiumVaultBet,
+      CONTRACT_ABIS.StadiumVaultBet,
+      this.provider
+    );
+    
+    const balance = await stadiumContract.getUSDCBalance();
+    return ethers.formatUnits(balance, 6);
+  }
 
+  async faucetUSDC(amount: string): Promise<void> {
+    if (!this.signer) throw new Error('Signer not initialized');
+    
+    const usdcContract = new ethers.Contract(
+      CONTRACT_ADDRESSES.TestUSDC,
+      CONTRACT_ABIS.TestUSDC,
+      this.signer
+    );
+    
+    const amountWei = ethers.parseUnits(amount, 6);
+    const tx = await usdcContract.faucet(await this.signer.getAddress(), amountWei);
+    await tx.wait();
+  }
+
+  async approveUSDC(spender: string, amount: string): Promise<void> {
+    if (!this.signer) throw new Error('Signer not initialized');
+    
+    const usdcContract = new ethers.Contract(
+      CONTRACT_ADDRESSES.TestUSDC,
+      CONTRACT_ABIS.TestUSDC,
+      this.signer
+    );
+    
+    const amountWei = ethers.parseUnits(amount, 6);
+    const tx = await usdcContract.approve(spender, amountWei);
+    await tx.wait();
+  }
+
+  async placeBetWithFHE(
+    gameId: number,
+    amount: string,
+    teamSelection: number,
+    instance: FhevmInstance,
+    signerPromise: Promise<any>
+  ): Promise<number> {
     try {
-      // In a real implementation, this would:
-      // 1. Encrypt the bet amount using FHE
-      // 2. Encrypt the team selection using FHE
-      // 3. Call the contract's placeBet function with encrypted data
-      // 4. Return the transaction hash and bet ID
-
-      console.log(`Placing FHE encrypted bet:`, {
-        gameId,
-        teamSelection,
-        amount,
-        userAddress
-      });
-
-      // Simulate FHE encryption process
-      const encryptedAmount = this.simulateFHEEncryption(amount);
-      const encryptedTeamSelection = this.simulateFHEEncryption(
-        teamSelection === 'home' ? 0 : teamSelection === 'away' ? 1 : 2
+      // Convert team selection to number
+      const teamSelectionNum = Number(teamSelection);
+      
+      // Create encrypted input
+      const input = instance.createEncryptedInput();
+      
+      // Add amount and team selection to encrypted input
+      const amountBigInt = BigInt(ethers.parseUnits(amount, 6).toString());
+      input.add32(amountBigInt);
+      input.add8(teamSelectionNum);
+      
+      // Encrypt the input
+      const encryptedInput = await input.encrypt();
+      
+      // Convert handles and proof to hex strings
+      const handles = encryptedInput.handles.map(handle => `0x${handle.toString(16)}`);
+      const inputProof = `0x${encryptedInput.inputProof.toString(16)}`;
+      
+      // Get signer
+      const signer = await signerPromise;
+      if (!signer) throw new Error('Signer not available');
+      
+      // Create contract instance
+      const contract = new ethers.Contract(
+        CONTRACT_ADDRESSES.StadiumVaultBet,
+        CONTRACT_ABIS.StadiumVaultBet,
+        signer
       );
-
-      // Simulate contract call
-      const betId = `fhe_bet_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       
-      console.log('FHE Encrypted bet placed successfully:', {
-        betId,
-        encryptedAmount,
-        encryptedTeamSelection
-      });
-
-      return { success: true, betId };
-    } catch (error) {
-      console.error('Failed to place FHE encrypted bet:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Failed to place bet' 
-      };
-    }
-  }
-
-  // Get user's bets from the contract
-  async getUserBets(userAddress: string): Promise<FHEBet[]> {
-    if (!this.isInitialized) {
-      throw new Error('Contract service not initialized');
-    }
-
-    try {
-      // In a real implementation, this would call the contract
-      // to get the user's encrypted bets and decrypt them
+      // First approve USDC transfer
+      await this.approveUSDC(CONTRACT_ADDRESSES.StadiumVaultBet, amount);
       
-      console.log(`Getting FHE encrypted bets for user: ${userAddress}`);
-      
-      // Return mock data for now
-      return [];
-    } catch (error) {
-      console.error('Failed to get user bets from contract:', error);
-      throw error;
-    }
-  }
-
-  // Get betting pool information
-  async getBettingPool(gameId: string) {
-    if (!this.isInitialized) {
-      throw new Error('Contract service not initialized');
-    }
-
-    try {
-      // In a real implementation, this would call the contract
-      // to get encrypted betting pool data
-      
-      console.log(`Getting FHE encrypted betting pool for game: ${gameId}`);
-      
-      return {
+      // Place bet with encrypted data
+      const tx = await contract.placeBet(
         gameId,
-        totalBets: 0,
-        totalAmount: 0,
-        homeBets: 0,
-        awayBets: 0,
-        drawBets: 0
-      };
+        handles[0], // amount handle
+        handles[1], // team selection handle
+        inputProof
+      );
+      
+      const receipt = await tx.wait();
+      
+      // Extract bet ID from events
+      const betPlacedEvent = receipt.logs.find(log => {
+        try {
+          const parsed = contract.interface.parseLog(log);
+          return parsed?.name === 'BetPlaced';
+        } catch {
+          return false;
+        }
+      });
+      
+      if (betPlacedEvent) {
+        const parsed = contract.interface.parseLog(betPlacedEvent);
+        return Number(parsed?.args.betId);
+      }
+      
+      return 0; // Fallback
     } catch (error) {
-      console.error('Failed to get betting pool from contract:', error);
+      console.error('Error placing bet with FHE:', error);
       throw error;
     }
   }
 
-  // Simulate FHE encryption (in real implementation, this would use actual FHE)
-  private simulateFHEEncryption(value: number): string {
-    // This is just a simulation - in reality, this would use FHE encryption
-    const encrypted = btoa(JSON.stringify({ value, timestamp: Date.now() }));
-    return `fhe_encrypted_${encrypted}`;
+  // Legacy method for backward compatibility
+  async placeBet(gameId: number, amount: string, teamSelection: number): Promise<number> {
+    console.warn('Using legacy placeBet method. Consider using placeBetWithFHE for encrypted betting.');
+    
+    if (!this.signer) throw new Error('Signer not initialized');
+    
+    const contract = new ethers.Contract(
+      CONTRACT_ADDRESSES.StadiumVaultBet,
+      CONTRACT_ABIS.StadiumVaultBet,
+      this.signer
+    );
+    
+    // Approve USDC transfer
+    await this.approveUSDC(CONTRACT_ADDRESSES.StadiumVaultBet, amount);
+    
+    // Place bet (this would need to be updated to handle non-FHE case)
+    const tx = await contract.placeBet(gameId, amount, teamSelection);
+    const receipt = await tx.wait();
+    
+    return receipt.logs.length > 0 ? 1 : 0; // Simplified return
   }
 
-  // Simulate FHE decryption (in real implementation, this would use actual FHE)
-  private simulateFHEDecryption(encryptedValue: string): number {
-    try {
-      const decoded = atob(encryptedValue.replace('fhe_encrypted_', ''));
-      const data = JSON.parse(decoded);
-      return data.value;
-    } catch (error) {
-      console.error('Failed to decrypt FHE value:', error);
-      return 0;
-    }
+  async getGameCount(): Promise<number> {
+    if (!this.provider) throw new Error('Provider not initialized');
+    
+    const contract = new ethers.Contract(
+      CONTRACT_ADDRESSES.StadiumVaultBet,
+      CONTRACT_ABIS.StadiumVaultBet,
+      this.provider
+    );
+    
+    return Number(await contract.getGameCount());
   }
 
-  // Check if the service is ready
-  isReady(): boolean {
-    return this.isInitialized;
-  }
-
-  // Get contract address
-  getContractAddress(): string {
-    return CONTRACT_ADDRESSES.StadiumVaultBet;
+  async getBetCount(): Promise<number> {
+    if (!this.provider) throw new Error('Provider not initialized');
+    
+    const contract = new ethers.Contract(
+      CONTRACT_ADDRESSES.StadiumVaultBet,
+      CONTRACT_ABIS.StadiumVaultBet,
+      this.provider
+    );
+    
+    return Number(await contract.getBetCount());
   }
 }
 
-export const fheContractService = new FHEContractService();
+export const fheContractService = new FheContractService();
