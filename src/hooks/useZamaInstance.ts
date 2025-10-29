@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { createInstance, initSDK, SepoliaConfig } from '@zama-fhe/relayer-sdk/bundle';
-import type { FhevmInstance } from '@zama-fhe/relayer-sdk/bundle';
+import { createInstance, initSDK, SepoliaConfig } from '@zama-fhe/relayer-sdk';
+import type { FhevmInstance } from '@zama-fhe/relayer-sdk';
 
 export function useZamaInstance() {
   const [instance, setInstance] = useState<FhevmInstance | null>(null);
@@ -15,29 +15,7 @@ export function useZamaInstance() {
       setIsLoading(true);
       setError(null);
 
-      // Wait for FHE SDK to be available
-      let sdkRetries = 0;
-      const maxSdkRetries = 20;
-      
-      while (typeof (window as any).createInstance === 'undefined' && sdkRetries < maxSdkRetries) {
-        console.log('Waiting for FHE SDK to load...', sdkRetries);
-        await new Promise(resolve => setTimeout(resolve, 500));
-        sdkRetries++;
-      }
-
-      if (typeof (window as any).createInstance === 'undefined') {
-        throw new Error('FHE SDK not loaded. Please refresh the page and try again.');
-      }
-
-      // Wait for ethereum provider to be available
-      let retries = 0;
-      const maxRetries = 10;
-      
-      while (!(window as any).ethereum && retries < maxRetries) {
-        await new Promise(resolve => setTimeout(resolve, 500));
-        retries++;
-      }
-
+      // Check if ethereum provider is available
       if (!(window as any).ethereum) {
         throw new Error('Ethereum provider not found. Please install MetaMask or connect a wallet.');
       }
