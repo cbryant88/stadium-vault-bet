@@ -301,13 +301,21 @@ export class FheContractService {
   async getGameCount(): Promise<number> {
     if (!this.provider) throw new Error('Provider not initialized');
     
-    const contract = new ethers.Contract(
-      CONTRACT_ADDRESSES.StadiumVaultBet,
-      CONTRACT_ABIS.StadiumVaultBet,
-      this.provider
-    );
-    
-    return Number(await contract.getGameCount());
+    try {
+      const contract = new ethers.Contract(
+        CONTRACT_ADDRESSES.StadiumVaultBet,
+        CONTRACT_ABIS.StadiumVaultBet,
+        this.provider
+      );
+      
+      const count = await contract.getGameCount();
+      console.log('Raw game count from contract:', count);
+      return Number(count);
+    } catch (error) {
+      console.error('Error getting game count:', error);
+      // Return 0 if there's an error, which will trigger mock games
+      return 0;
+    }
   }
 
   async getBetCount(): Promise<number> {
