@@ -2,6 +2,25 @@ import { ethers } from 'ethers';
 import { CONTRACT_ADDRESSES, CONTRACT_ABIS } from './contracts';
 import type { FhevmInstance } from '@zama-fhe/relayer-sdk/bundle';
 
+// FHE Handle 转换工具 (参考 fantasy-vault-trade)
+export const convertHex = (handle: any): string => {
+  let hex = '';
+  if (handle instanceof Uint8Array) {
+    hex = `0x${Array.from(handle).map(b => b.toString(16).padStart(2, '0')).join('')}`;
+  } else if (typeof handle === 'string') {
+    hex = handle.startsWith('0x') ? handle : `0x${handle}`;
+  } else if (typeof handle === 'number') {
+    hex = `0x${handle.toString(16)}`;
+  } else if (handle && typeof handle.toString === 'function') {
+    const str = handle.toString(16);
+    hex = str.startsWith('0x') ? str : `0x${str}`;
+  } else {
+    console.warn('Unknown handle type:', typeof handle, handle);
+    hex = `0x${JSON.stringify(handle)}`;
+  }
+  return hex;
+};
+
 export interface FHEGame {
   id: number;
   homeTeam: string;
@@ -125,29 +144,52 @@ export class FheContractService {
       console.log('✅ Encrypted input created');
       
       // Add amount and team selection to encrypted input
+      console.log('🔄 Step 2: Adding encrypted data...');
+      
+      // 验证所有值都在32位范围内
+      const max32Bit = 4294967295; // 2^32 - 1
+      
       const amountStr = String(amount);
       const amountBigInt = BigInt(ethers.parseUnits(amountStr, 6).toString());
       console.log('📊 Adding amount:', amountBigInt.toString());
+      
+      if (amountBigInt > BigInt(max32Bit)) {
+        throw new Error(`Amount ${amountBigInt} exceeds 32-bit limit`);
+      }
       input.add32(amountBigInt);
       
       console.log('📊 Adding team selection:', teamSelectionNum);
+      if (teamSelectionNum > max32Bit) {
+        throw new Error(`Team selection ${teamSelectionNum} exceeds 32-bit limit`);
+      }
       input.add8(teamSelectionNum);
       
+      console.log('✅ Step 2 completed: All data added to encrypted input');
+      
       // Encrypt the input
-      console.log('🔄 Encrypting input...');
+      console.log('🔄 Step 3: Encrypting data...');
       const encryptedInput = await input.encrypt();
-      console.log('✅ Input encrypted successfully');
+      console.log('✅ Step 3 completed: Data encrypted successfully');
+      console.log('📊 Encrypted handles count:', encryptedInput.handles.length);
       
       // Convert handles and proof to hex strings
-      const handles = encryptedInput.handles.map(handle => {
-        const hex = `0x${handle.toString(16)}`;
-        console.log('📊 Handle:', hex.substring(0, 10) + '...');
+      console.log('🔄 Step 4: Converting handles to hex format...');
+      const handles = encryptedInput.handles.map((handle, index) => {
+        const hex = convertHex(handle);
+        console.log(`📊 Handle ${index}: ${hex.substring(0, 10)}... (${hex.length} chars)`);
         return hex;
       });
       
       const inputProof = `0x${Array.from(encryptedInput.inputProof)
         .map((b: number) => b.toString(16).padStart(2, '0')).join('')}`;
       console.log('📊 Proof length:', inputProof.length);
+      
+      console.log('🎉 Encryption completed successfully!');
+      console.log('📊 Final result:', {
+        handlesCount: handles.length,
+        proofLength: inputProof.length,
+        handles: handles.map(h => h.substring(0, 10) + '...')
+      });
       
       // Create contract instance
       const contract = new ethers.Contract(
