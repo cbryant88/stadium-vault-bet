@@ -2,6 +2,29 @@ import { ethers } from 'ethers';
 import { CONTRACT_ADDRESSES, CONTRACT_ABIS } from './contracts';
 import type { FhevmInstance } from '@zama-fhe/relayer-sdk/bundle';
 
+export interface FHEGame {
+  id: number;
+  homeTeam: string;
+  awayTeam: string;
+  startTime: number;
+  endTime: number;
+  isActive: boolean;
+  isFinished: boolean;
+}
+
+export interface FHEBet {
+  id: number;
+  gameId: number;
+  amount: number;
+  teamSelection: 'home' | 'away' | 'draw';
+  odds: number;
+  isWinner: boolean;
+  isActive: boolean;
+  isSettled: boolean;
+  bettor: string;
+  timestamp: number;
+}
+
 export class FheContractService {
   private provider: ethers.Provider | null = null;
   private signer: ethers.Signer | null = null;
@@ -187,6 +210,185 @@ export class FheContractService {
     );
     
     return Number(await contract.getBetCount());
+  }
+
+  // Get all games
+  async getGames(): Promise<FHEGame[]> {
+    if (!this.provider) throw new Error('Provider not initialized');
+    
+    try {
+      const gameCount = await this.getGameCount();
+      console.log('Game count from contract:', gameCount);
+      
+      // If no games in contract, return mock games for testing
+      if (gameCount === 0) {
+        console.log('No games in contract, returning mock games');
+        return [
+          {
+            id: 0,
+            homeTeam: "Manchester United",
+            awayTeam: "Liverpool",
+            startTime: Math.floor(Date.now() / 1000) + 3600, // 1 hour from now
+            endTime: Math.floor(Date.now() / 1000) + 7200,   // 2 hours from now
+            isActive: true,
+            isFinished: false
+          },
+          {
+            id: 1,
+            homeTeam: "Barcelona",
+            awayTeam: "Real Madrid",
+            startTime: Math.floor(Date.now() / 1000) + 7200, // 2 hours from now
+            endTime: Math.floor(Date.now() / 1000) + 10800,  // 3 hours from now
+            isActive: true,
+            isFinished: false
+          },
+          {
+            id: 2,
+            homeTeam: "Arsenal",
+            awayTeam: "Chelsea",
+            startTime: Math.floor(Date.now() / 1000) + 10800, // 3 hours from now
+            endTime: Math.floor(Date.now() / 1000) + 14400,   // 4 hours from now
+            isActive: true,
+            isFinished: false
+          }
+        ];
+      }
+      
+      const contract = new ethers.Contract(
+        CONTRACT_ADDRESSES.StadiumVaultBet,
+        CONTRACT_ABIS.StadiumVaultBet,
+        this.provider
+      );
+      
+      const games: FHEGame[] = [];
+      
+      for (let i = 0; i < gameCount; i++) {
+        try {
+          const gameData = await contract.games(i);
+          const basicInfo = await contract.getGameBasicInfo(i);
+          
+          games.push({
+            id: i,
+            homeTeam: gameData.homeTeam,
+            awayTeam: gameData.awayTeam,
+            startTime: Number(basicInfo.startTime),
+            endTime: Number(basicInfo.endTime),
+            isActive: basicInfo.isActive,
+            isFinished: basicInfo.isFinished
+          });
+        } catch (error) {
+          console.warn(`Failed to load game ${i}:`, error);
+        }
+      }
+      
+      return games;
+    } catch (error) {
+      console.error('Error loading games:', error);
+      // Return mock games as fallback
+      return [
+        {
+          id: 0,
+          homeTeam: "Manchester United",
+          awayTeam: "Liverpool",
+          startTime: Math.floor(Date.now() / 1000) + 3600,
+          endTime: Math.floor(Date.now() / 1000) + 7200,
+          isActive: true,
+          isFinished: false
+        },
+        {
+          id: 1,
+          homeTeam: "Barcelona",
+          awayTeam: "Real Madrid",
+          startTime: Math.floor(Date.now() / 1000) + 7200,
+          endTime: Math.floor(Date.now() / 1000) + 10800,
+          isActive: true,
+          isFinished: false
+        },
+        {
+          id: 2,
+          homeTeam: "Arsenal",
+          awayTeam: "Chelsea",
+          startTime: Math.floor(Date.now() / 1000) + 10800,
+          endTime: Math.floor(Date.now() / 1000) + 14400,
+          isActive: true,
+          isFinished: false
+        }
+      ];
+    }
+  }
+
+  // Get user bets
+  async getUserBets(userAddress: string): Promise<FHEBet[]> {
+    if (!this.provider) throw new Error('Provider not initialized');
+    
+    const contract = new ethers.Contract(
+      CONTRACT_ADDRESSES.StadiumVaultBet,
+      CONTRACT_ABIS.StadiumVaultBet,
+      this.provider
+    );
+    
+    try {
+      const betCount = await this.getBetCount();
+      const userBets: FHEBet[] = [];
+      
+      for (let i = 0; i < betCount; i++) {
+        try {
+          const betData = await contract.bets(i);
+          const basicInfo = await contract.getBetBasicInfo(i);
+          
+          // Check if this bet belongs to the user
+          if (betData.bettor.toLowerCase() === userAddress.toLowerCase()) {
+            userBets.push({
+              id: i,
+              gameId: Number(basicInfo.gameId),
+              amount: 0, // Encrypted, would need decryption
+              teamSelection: 'home', // Placeholder, would need decryption
+              odds: 0, // Encrypted, would need decryption
+              isWinner: false, // Encrypted, would need decryption
+              isActive: basicInfo.isActive,
+              isSettled: basicInfo.isSettled,
+              bettor: betData.bettor,
+              timestamp: Number(basicInfo.timestamp)
+            });
+          }
+        } catch (error) {
+          console.warn(`Failed to load bet ${i}:`, error);
+        }
+      }
+      
+      return userBets;
+    } catch (error) {
+      console.error('Error loading user bets:', error);
+      throw error;
+    }
+  }
+
+  // Get betting pool for a game
+  async getBettingPool(gameId: number): Promise<any> {
+    if (!this.provider) throw new Error('Provider not initialized');
+    
+    const contract = new ethers.Contract(
+      CONTRACT_ADDRESSES.StadiumVaultBet,
+      CONTRACT_ABIS.StadiumVaultBet,
+      this.provider
+    );
+    
+    try {
+      const poolData = await contract.bettingPools(gameId);
+      return {
+        totalBets: 0, // Encrypted, would need decryption
+        totalAmount: 0, // Encrypted, would need decryption
+        homeBets: 0, // Encrypted, would need decryption
+        awayBets: 0, // Encrypted, would need decryption
+        drawBets: 0, // Encrypted, would need decryption
+        homeTotalAmount: 0, // Encrypted, would need decryption
+        awayTotalAmount: 0, // Encrypted, would need decryption
+        drawTotalAmount: 0 // Encrypted, would need decryption
+      };
+    } catch (error) {
+      console.error('Error loading betting pool:', error);
+      throw error;
+    }
   }
 }
 

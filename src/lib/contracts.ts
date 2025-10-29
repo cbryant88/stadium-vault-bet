@@ -53,6 +53,69 @@ export const CONTRACT_ABIS = {
       "type": "function"
     },
     {
+      "inputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+      "name": "games",
+      "outputs": [
+        {"internalType": "bytes32", "name": "gameId", "type": "bytes32"},
+        {"internalType": "string", "name": "homeTeam", "type": "string"},
+        {"internalType": "string", "name": "awayTeam", "type": "string"},
+        {"internalType": "bytes32", "name": "homeScore", "type": "bytes32"},
+        {"internalType": "bytes32", "name": "awayScore", "type": "bytes32"},
+        {"internalType": "bytes32", "name": "homeOdds", "type": "bytes32"},
+        {"internalType": "bytes32", "name": "awayOdds", "type": "bytes32"},
+        {"internalType": "bytes32", "name": "drawOdds", "type": "bytes32"},
+        {"internalType": "bytes32", "name": "isActive", "type": "bytes32"},
+        {"internalType": "bytes32", "name": "isFinished", "type": "bytes32"},
+        {"internalType": "uint256", "name": "startTime", "type": "uint256"},
+        {"internalType": "uint256", "name": "endTime", "type": "uint256"}
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+      "name": "bets",
+      "outputs": [
+        {"internalType": "bytes32", "name": "betId", "type": "bytes32"},
+        {"internalType": "bytes32", "name": "amount", "type": "bytes32"},
+        {"internalType": "bytes32", "name": "odds", "type": "bytes32"},
+        {"internalType": "bytes32", "name": "teamSelection", "type": "bytes32"},
+        {"internalType": "bytes32", "name": "isWinner", "type": "bytes32"},
+        {"internalType": "bool", "name": "isActive", "type": "bool"},
+        {"internalType": "bool", "name": "isSettled", "type": "bool"},
+        {"internalType": "address", "name": "bettor", "type": "address"},
+        {"internalType": "uint256", "name": "gameId", "type": "uint256"},
+        {"internalType": "uint256", "name": "timestamp", "type": "uint256"}
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [{"internalType": "uint256", "name": "gameId", "type": "uint256"}],
+      "name": "getGameBasicInfo",
+      "outputs": [
+        {"internalType": "uint256", "name": "startTime", "type": "uint256"},
+        {"internalType": "uint256", "name": "endTime", "type": "uint256"},
+        {"internalType": "bool", "name": "isActive", "type": "bool"},
+        {"internalType": "bool", "name": "isFinished", "type": "bool"}
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [{"internalType": "uint256", "name": "betId", "type": "uint256"}],
+      "name": "getBetBasicInfo",
+      "outputs": [
+        {"internalType": "bool", "name": "isActive", "type": "bool"},
+        {"internalType": "bool", "name": "isSettled", "type": "bool"},
+        {"internalType": "address", "name": "bettor", "type": "address"},
+        {"internalType": "uint256", "name": "gameId", "type": "uint256"},
+        {"internalType": "uint256", "name": "timestamp", "type": "uint256"}
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
       "inputs": [],
       "name": "getGameCount",
       "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],

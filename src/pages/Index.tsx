@@ -4,8 +4,12 @@ import { Scoreboard } from "@/components/Scoreboard";
 import { BettingSlip } from "@/components/BettingSlip";
 import { UserBets } from "@/components/UserBets";
 import { TestBettingFlow } from "@/components/TestBettingFlow";
+import { GamesList } from "@/components/GamesList";
+import { useBetting } from "@/hooks/useBetting";
 
 const Index = () => {
+  const { games, loading, error } = useBetting();
+
   return (
     <div className="min-h-screen bg-gradient-stadium">
       <Header />
@@ -20,8 +24,9 @@ const Index = () => {
             <TestBettingFlow />
           </div>
 
-          {/* Right Column - Scoreboard */}
-          <div className="lg:col-span-2">
+          {/* Right Column - Games List and Scoreboard */}
+          <div className="lg:col-span-2 space-y-6">
+            <GamesList games={games} />
             <Scoreboard />
           </div>
         </div>
