@@ -7,7 +7,7 @@ async function main() {
   console.log("Deployer:", deployer.address);
   
   // Contract address from deployment
-  const stadiumAddress = "0x088C35C09e15b4781495AB48838035b19f0E8A01";
+  const stadiumAddress = "0xD491d3757c243F44FF3077536F261aaC2B023B9F";
   
   const StadiumVaultBet = await ethers.getContractFactory("StadiumVaultBet");
   const stadiumVault = StadiumVaultBet.attach(stadiumAddress);

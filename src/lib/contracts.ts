@@ -1,7 +1,7 @@
 // Auto-generated contract addresses and ABIs
 export const CONTRACT_ADDRESSES = {
-  StadiumVaultBet: "0x088C35C09e15b4781495AB48838035b19f0E8A01",
-  TestUSDC: "0x3cECFA9dD5e4ca8e30AD38aBFd7858927D9f2003",
+  StadiumVaultBet: "0xD491d3757c243F44FF3077536F261aaC2B023B9F",
+  TestUSDC: "0x41fda936798b854393029E2ee7b5689087FFcB9a",
 };
 
 export const CONTRACT_ABIS = {

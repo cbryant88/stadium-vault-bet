@@ -13,7 +13,7 @@ export interface BettingState {
 
 export const useBetting = () => {
   const { address, isConnected } = useAccount();
-  const { instance, isLoading: fheLoading, error: fheError, isInitialized: fheReady } = useZamaInstance();
+  const { instance, isLoading: fheLoading, error: fheError } = useZamaInstance();
   const { signerPromise } = useEthersSigner();
   const [state, setState] = useState<BettingState>({
     games: [],
@@ -141,7 +141,7 @@ export const useBetting = () => {
     loadGames,
     loadUserBets,
     isConnected,
-    fheReady,
+            fheReady: !fheLoading && !!instance,
     fheLoading,
     fheError
   };

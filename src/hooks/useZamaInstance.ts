@@ -1,61 +1,73 @@
 import { useState, useEffect } from 'react';
 import { createInstance, initSDK, SepoliaConfig } from '@zama-fhe/relayer-sdk/bundle';
-import type { FhevmInstance } from '@zama-fhe/relayer-sdk/bundle';
 
 export function useZamaInstance() {
-  const [instance, setInstance] = useState<FhevmInstance | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [instance, setInstance] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isInitialized, setIsInitialized] = useState(false);
-
-  const initializeZama = async () => {
-    if (isLoading || isInitialized) return;
-
-    try {
-      setIsLoading(true);
-      setError(null);
-
-      // Check if ethereum provider is available
-      if (!(window as any).ethereum) {
-        throw new Error('Ethereum provider not found. Please install MetaMask or connect a wallet.');
-      }
-
-      console.log('Initializing FHE SDK...');
-      await initSDK();
-
-      const config = {
-        ...SepoliaConfig,
-        network: (window as any).ethereum
-      };
-
-      console.log('Creating FHE instance...');
-      const zamaInstance = await createInstance(config);
-      setInstance(zamaInstance);
-      setIsInitialized(true);
-      console.log('FHE instance created successfully');
-
-    } catch (err) {
-      console.error('Failed to initialize Zama instance:', err);
-      setError(err instanceof Error ? err.message : 'Failed to initialize encryption service. Please ensure you have a wallet connected.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   useEffect(() => {
-    // Delay initialization to allow wallet to load
-    const timer = setTimeout(() => {
-      initializeZama();
-    }, 1000);
+    let mounted = true;
 
-    return () => clearTimeout(timer);
+    const initZama = async () => {
+      try {
+        console.log('🚀 Starting FHE initialization process...');
+        setIsLoading(true);
+        setError(null);
+
+        // 检查CDN脚本是否加载
+        if (typeof window !== 'undefined' && !window.relayerSDK) {
+          console.warn('⚠️ FHE SDK CDN script not loaded, waiting...');
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          if (!window.relayerSDK) {
+            throw new Error('FHE SDK CDN script not loaded. Please check network connection.');
+          }
+        }
+
+        console.log('🔄 Step 1: Initializing FHE SDK...');
+        console.log('📊 SDK available:', !!window.relayerSDK);
+        console.log('📊 initSDK function:', typeof window.relayerSDK?.initSDK);
+        
+        await initSDK();
+        console.log('✅ Step 1 completed: FHE SDK initialized successfully');
+
+        console.log('🔄 Step 2: Creating FHE instance with Sepolia config...');
+        console.log('📊 SepoliaConfig:', SepoliaConfig);
+        
+        const zamaInstance = await createInstance(SepoliaConfig);
+        console.log('✅ Step 2 completed: FHE instance created successfully');
+        console.log('📊 Instance methods:', Object.keys(zamaInstance || {}));
+
+        if (mounted) {
+          setInstance(zamaInstance);
+          console.log('🎉 FHE initialization completed successfully!');
+          console.log('📊 Instance ready for encryption/decryption operations');
+        }
+      } catch (err) {
+        console.error('❌ FHE initialization failed at step:', err);
+        console.error('📊 Error details:', {
+          name: err?.name,
+          message: err?.message,
+          stack: err?.stack
+        });
+        
+        if (mounted) {
+          setError(`Failed to initialize encryption service: ${err instanceof Error ? err.message : 'Unknown error'}`);
+        }
+      } finally {
+        if (mounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    initZama();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
-  return {
-    instance,
-    isLoading,
-    error,
-    isInitialized,
-    initializeZama
-  };
+  return { instance, isLoading, error };
 }

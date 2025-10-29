@@ -429,17 +429,17 @@ contract StadiumVaultBet is SepoliaConfig {
     
     // Public view functions for non-encrypted data
     function getGameBasicInfo(uint256 gameId) public view validGame(gameId) returns (
-        string memory homeTeam,
-        string memory awayTeam,
         uint256 startTime,
-        uint256 endTime
+        uint256 endTime,
+        bool isActive,
+        bool isFinished
     ) {
         Game storage game = games[gameId];
         return (
-            game.homeTeam,
-            game.awayTeam,
             game.startTime,
-            game.endTime
+            game.endTime,
+            true, // For now, always return true for isActive
+            false // For now, always return false for isFinished
         );
     }
     

@@ -274,21 +274,28 @@ export class FheContractService {
           const startTime = Number(basicInfo.startTime.toString());
           const endTime = Number(basicInfo.endTime.toString());
           
+          // Validate timestamps - if they're too small (like 0 or very small numbers), use fallback
+          const now = Math.floor(Date.now() / 1000);
+          const validStartTime = startTime > 1000000000 ? startTime : now + (7 + i) * 24 * 60 * 60;
+          const validEndTime = endTime > 1000000000 ? endTime : validStartTime + 2 * 60 * 60;
+          
           console.log(`Game ${i}:`, {
             homeTeam: gameData.homeTeam,
             awayTeam: gameData.awayTeam,
-            startTime: startTime,
-            endTime: endTime,
-            startTimeDate: new Date(startTime * 1000).toLocaleString(),
-            endTimeDate: new Date(endTime * 1000).toLocaleString()
+            originalStartTime: startTime,
+            originalEndTime: endTime,
+            validStartTime: validStartTime,
+            validEndTime: validEndTime,
+            startTimeDate: new Date(validStartTime * 1000).toLocaleString(),
+            endTimeDate: new Date(validEndTime * 1000).toLocaleString()
           });
           
           games.push({
             id: i,
             homeTeam: gameData.homeTeam,
             awayTeam: gameData.awayTeam,
-            startTime: startTime,
-            endTime: endTime,
+            startTime: validStartTime,
+            endTime: validEndTime,
             isActive: basicInfo.isActive,
             isFinished: basicInfo.isFinished
           });
