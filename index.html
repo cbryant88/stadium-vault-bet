@@ -29,7 +29,13 @@
       // Ensure FHE SDK is loaded before React
       window.addEventListener('load', function() {
         console.log('FHE SDK loaded:', typeof window.createInstance !== 'undefined');
+        console.log('Available FHE functions:', Object.keys(window).filter(key => key.includes('FHE') || key.includes('createInstance')));
       });
+      
+      // Alternative loading check
+      setTimeout(() => {
+        console.log('Delayed FHE SDK check:', typeof window.createInstance !== 'undefined');
+      }, 2000);
     </script>
   </head>
 

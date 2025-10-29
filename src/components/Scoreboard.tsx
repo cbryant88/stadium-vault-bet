@@ -74,68 +74,89 @@ export const Scoreboard = () => {
         <div className="w-2 h-2 bg-stadium-live rounded-full animate-live-pulse ml-2"></div>
       </div>
 
-      {games.map((game) => (
-        <Card key={game.id} className="bg-gradient-scoreboard border-stadium-glow/20 p-4 shadow-scoreboard animate-scoreboard-flicker">
-          <div className="space-y-3">
-            {/* Game Header */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Badge 
-                  variant={game.status === "live" ? "default" : "secondary"}
-                  className={game.status === "live" ? "bg-stadium-live text-background animate-live-pulse" : ""}
-                >
-                  {game.status === "live" ? "LIVE" : game.status.toUpperCase()}
-                </Badge>
-                {game.timeRemaining && (
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <Clock className="w-3 h-3" />
-                    <span>{game.timeRemaining}</span>
-                  </div>
-                )}
+      {games.map((game) => {
+        // Calculate game status based on time
+        const now = Math.floor(Date.now() / 1000);
+        let status = 'upcoming';
+        let timeRemaining = '';
+        
+        if (now >= game.startTime && now < game.endTime) {
+          status = 'live';
+          const remaining = game.endTime - now;
+          const hours = Math.floor(remaining / 3600);
+          const minutes = Math.floor((remaining % 3600) / 60);
+          timeRemaining = `${hours}h ${minutes}m`;
+        } else if (now >= game.endTime) {
+          status = 'finished';
+        } else {
+          const untilStart = game.startTime - now;
+          const hours = Math.floor(untilStart / 3600);
+          const minutes = Math.floor((untilStart % 3600) / 60);
+          timeRemaining = `Starts in ${hours}h ${minutes}m`;
+        }
+
+        return (
+          <Card key={game.id} className="bg-gradient-scoreboard border-stadium-glow/20 p-4 shadow-scoreboard animate-scoreboard-flicker">
+            <div className="space-y-3">
+              {/* Game Header */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Badge 
+                    variant={status === "live" ? "default" : "secondary"}
+                    className={status === "live" ? "bg-stadium-live text-background animate-live-pulse" : ""}
+                  >
+                    {status === "live" ? "LIVE" : status.toUpperCase()}
+                  </Badge>
+                  {timeRemaining && (
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <Clock className="w-3 h-3" />
+                      <span>{timeRemaining}</span>
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <Users className="w-3 h-3" />
+                  <span>0 bets</span>
+                </div>
               </div>
-              <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                <Users className="w-3 h-3" />
-                <span>{game.totalBets.toLocaleString()} bets</span>
-              </div>
-            </div>
 
             {/* Score Display */}
             <div className="grid grid-cols-3 gap-4 items-center">
               <div className="text-center">
                 <div className="font-bold text-lg">{game.homeTeam}</div>
                 <div className="text-2xl font-mono font-bold text-stadium-glow">
-                  {game.homeScore}
+                  {status === 'finished' ? '2' : '-'}
                 </div>
-                <div className="text-xs text-accent">@{game.odds.home}</div>
+                <div className="text-xs text-accent">@1.8</div>
               </div>
               
               <div className="text-center">
                 <div className="text-xs text-muted-foreground mb-1">VS</div>
-                {game.odds.draw && (
-                  <div className="text-xs text-accent">Draw @{game.odds.draw}</div>
-                )}
+                <div className="text-xs text-accent">Draw @3.2</div>
               </div>
               
               <div className="text-center">
                 <div className="font-bold text-lg">{game.awayTeam}</div>
                 <div className="text-2xl font-mono font-bold text-stadium-glow">
-                  {game.awayScore}
+                  {status === 'finished' ? '1' : '-'}
                 </div>
-                <div className="text-xs text-accent">@{game.odds.away}</div>
+                <div className="text-xs text-accent">@2.0</div>
               </div>
             </div>
 
             {/* Quick Bet Actions */}
             <div className="grid grid-cols-2 gap-2 pt-2 border-t border-border/50">
               <button 
-                onClick={() => addBetToSlip(game.id, game.homeTeam, game.awayTeam, game.odds.home, 'home')}
+                onClick={() => addBetToSlip(game.id.toString(), game.homeTeam, game.awayTeam, 1.8, 'home')}
                 className="bg-stadium-glow/10 hover:bg-stadium-glow/20 border border-stadium-glow/30 rounded-md py-2 px-3 text-sm font-medium transition-colors"
+                disabled={status === 'finished'}
               >
                 Bet {game.homeTeam}
               </button>
               <button 
-                onClick={() => addBetToSlip(game.id, game.awayTeam, game.homeTeam, game.odds.away, 'away')}
+                onClick={() => addBetToSlip(game.id.toString(), game.awayTeam, game.homeTeam, 2.0, 'away')}
                 className="bg-accent/10 hover:bg-accent/20 border border-accent/30 rounded-md py-2 px-3 text-sm font-medium transition-colors"
+                disabled={status === 'finished'}
               >
                 Bet {game.awayTeam}
               </button>
