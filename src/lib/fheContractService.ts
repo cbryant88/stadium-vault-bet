@@ -105,24 +105,44 @@ export class FheContractService {
       // Convert team selection to number
       const teamSelectionNum = Number(teamSelection);
       
-      // Create encrypted input
-      const input = instance.createEncryptedInput();
+      // Get signer first to get user address
+      const signer = await signerPromise;
+      if (!signer) throw new Error('Signer not available');
+      
+      const userAddress = await signer.getAddress();
+      console.log('📊 User address:', userAddress);
+      
+      // Create encrypted input with contract address and user address
+      console.log('🔄 Creating encrypted input...');
+      const input = instance.createEncryptedInput(
+        CONTRACT_ADDRESSES.StadiumVaultBet,
+        userAddress
+      );
+      console.log('✅ Encrypted input created');
       
       // Add amount and team selection to encrypted input
       const amountBigInt = BigInt(ethers.parseUnits(amount, 6).toString());
+      console.log('📊 Adding amount:', amountBigInt.toString());
       input.add32(amountBigInt);
+      
+      console.log('📊 Adding team selection:', teamSelectionNum);
       input.add8(teamSelectionNum);
       
       // Encrypt the input
+      console.log('🔄 Encrypting input...');
       const encryptedInput = await input.encrypt();
+      console.log('✅ Input encrypted successfully');
       
       // Convert handles and proof to hex strings
-      const handles = encryptedInput.handles.map(handle => `0x${handle.toString(16)}`);
-      const inputProof = `0x${encryptedInput.inputProof.toString(16)}`;
+      const handles = encryptedInput.handles.map(handle => {
+        const hex = `0x${handle.toString(16)}`;
+        console.log('📊 Handle:', hex.substring(0, 10) + '...');
+        return hex;
+      });
       
-      // Get signer
-      const signer = await signerPromise;
-      if (!signer) throw new Error('Signer not available');
+      const inputProof = `0x${Array.from(encryptedInput.inputProof)
+        .map((b: number) => b.toString(16).padStart(2, '0')).join('')}`;
+      console.log('📊 Proof length:', inputProof.length);
       
       // Create contract instance
       const contract = new ethers.Contract(
@@ -132,9 +152,12 @@ export class FheContractService {
       );
       
       // First approve USDC transfer
+      console.log('🔄 Approving USDC transfer...');
       await this.approveUSDC(CONTRACT_ADDRESSES.StadiumVaultBet, amount);
+      console.log('✅ USDC transfer approved');
       
       // Place bet with encrypted data
+      console.log('🔄 Placing bet on contract...');
       const tx = await contract.placeBet(
         gameId,
         handles[0], // amount handle
@@ -142,7 +165,9 @@ export class FheContractService {
         inputProof
       );
       
+      console.log('🔄 Waiting for transaction confirmation...');
       const receipt = await tx.wait();
+      console.log('✅ Transaction confirmed');
       
       // Extract bet ID from events
       const betPlacedEvent = receipt.logs.find(log => {
@@ -156,10 +181,15 @@ export class FheContractService {
       
       if (betPlacedEvent) {
         const parsed = contract.interface.parseLog(betPlacedEvent);
-        return Number(parsed?.args.betId);
+        const betId = Number(parsed?.args.betId);
+        console.log('✅ Bet placed successfully, ID:', betId);
+        return betId;
       }
       
-      return 0; // Fallback
+      // Fallback: return the current bet count - 1
+      const betCount = await this.getBetCount();
+      console.log('⚠️ Using fallback bet ID:', betCount - 1);
+      return betCount - 1;
     } catch (error) {
       console.error('Error placing bet with FHE:', error);
       throw error;
