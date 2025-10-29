@@ -1,6 +1,6 @@
 import { ethers } from 'ethers';
 import { CONTRACT_ADDRESSES, CONTRACT_ABIS } from './contracts';
-import type { FhevmInstance } from '@zama-fhe/relayer-sdk';
+import type { FhevmInstance } from '@zama-fhe/relayer-sdk/bundle';
 
 export interface FHEGame {
   id: number;
