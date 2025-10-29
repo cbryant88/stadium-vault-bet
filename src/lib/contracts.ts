@@ -1,7 +1,7 @@
 // Auto-generated contract addresses and ABIs
 export const CONTRACT_ADDRESSES = {
-  StadiumVaultBet: "0xf33910f959DFBe8b463969c9a829dfe63cF7629e",
-  TestUSDC: "0x017856bE1B25795c42bBed3bC03612f9bEef1ac9",
+  StadiumVaultBet: "0x81C6B05D115838816B2D6E11162d533A6510a57B",
+  TestUSDC: "0x9B89A787e6012d47459fDD71225155Df0C733Ba6",
 };
 
 export const CONTRACT_ABIS = {
@@ -43,8 +43,7 @@ export const CONTRACT_ABIS = {
     {
       "inputs": [
         {"internalType": "uint256", "name": "gameId", "type": "uint256"},
-        {"internalType": "bytes32", "name": "amount", "type": "bytes32"},
-        {"internalType": "bytes32", "name": "teamSelection", "type": "bytes32"},
+        {"internalType": "bytes32[]", "name": "handles", "type": "bytes32[]"},
         {"internalType": "bytes", "name": "inputProof", "type": "bytes"},
         {"internalType": "uint256", "name": "usdcAmount", "type": "uint256"}
       ],

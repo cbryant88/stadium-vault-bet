@@ -157,6 +157,11 @@ export class FheContractService {
       
       // Create encrypted input with contract address and user address
       console.log('🔄 Creating encrypted input...');
+      console.log('📊 Contract address:', CONTRACT_ADDRESSES.StadiumVaultBet);
+      console.log('📊 User address:', userAddress);
+      
+      // Try to create encrypted input with our contract address
+      // If this fails, it means the contract is not registered on FHE network
       const input = instance.createEncryptedInput(
         CONTRACT_ADDRESSES.StadiumVaultBet,
         userAddress
@@ -230,10 +235,12 @@ export class FheContractService {
         proofLength: inputProof.length
       });
       
+      // Create handles array for contract call
+      const handlesArray = [handles[0], handles[1]]; // Only 2 handles for our use case
+      
       const tx = await contract.placeBet(
         gameId,
-        handles[0], // amount handle (bytes32)
-        handles[1], // team selection handle (bytes32) 
+        handlesArray, // handles array (bytes32[])
         inputProof, // input proof (bytes)
         amountBigInt // usdcAmount (uint256) - amount to deduct from vault
       );
