@@ -163,7 +163,8 @@ export const Scoreboard = () => {
             </div>
           </div>
         </Card>
-      ))}
+        );
+      })}
     </div>
   );
 };
