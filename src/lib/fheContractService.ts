@@ -109,7 +109,22 @@ export class FheContractService {
       const signer = await signerPromise;
       if (!signer) throw new Error('Signer not available');
       
-      const userAddress = await signer.getAddress();
+      console.log('📊 Signer type:', typeof signer);
+      console.log('📊 Signer methods:', Object.getOwnPropertyNames(signer));
+      console.log('📊 Signer prototype methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(signer)));
+      
+      // Try different methods to get address
+      let userAddress;
+      if (typeof signer.getAddress === 'function') {
+        userAddress = await signer.getAddress();
+      } else if (typeof signer.address === 'string') {
+        userAddress = signer.address;
+      } else if (signer.account && signer.account.address) {
+        userAddress = signer.account.address;
+      } else {
+        throw new Error('Cannot get user address from signer');
+      }
+      
       console.log('📊 User address:', userAddress);
       
       // Create encrypted input with contract address and user address
