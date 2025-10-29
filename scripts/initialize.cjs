@@ -22,6 +22,11 @@ async function main() {
   const stadiumAddress = await stadiumVault.getAddress();
   console.log("✅ StadiumVaultBet deployed at:", stadiumAddress);
   
+  // Verify owner
+  const owner = await stadiumVault.owner();
+  console.log("Contract owner:", owner);
+  console.log("Deployer address:", deployer.address);
+  
   // Create test games (spread over next 30 days)
   console.log("\n⚽ Creating test games for the next 30 days...");
   const now = Math.floor(Date.now() / 1000);

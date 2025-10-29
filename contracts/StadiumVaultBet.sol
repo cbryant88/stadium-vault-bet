@@ -145,9 +145,9 @@ contract StadiumVaultBet is SepoliaConfig {
             awayTeam: _awayTeam,
             homeScore: FHE.asEuint32(0),
             awayScore: FHE.asEuint32(0),
-            homeOdds: FHE.asEuint32(0), // Will be set via FHE operations
-            awayOdds: FHE.asEuint32(0), // Will be set via FHE operations
-            drawOdds: FHE.asEuint32(0), // Will be set via FHE operations
+            homeOdds: FHE.asEuint32(180), // Set default odds
+            awayOdds: FHE.asEuint32(200), // Set default odds
+            drawOdds: FHE.asEuint32(320), // Set default odds
             isActive: FHE.asEbool(true),
             isFinished: FHE.asEbool(false),
             startTime: _startTime,
