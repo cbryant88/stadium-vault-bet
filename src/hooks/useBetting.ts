@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAccount } from 'wagmi';
 import { useZamaInstance } from './useZamaInstance';
 import { useEthersSigner } from './useEthersSigner';
+import { useVault } from './useVault';
 import { fheContractService, FHEGame, FHEBet } from '@/lib/fheContractService';
 
 export interface BettingState {
@@ -15,6 +16,7 @@ export const useBetting = () => {
   const { address, isConnected } = useAccount();
   const { instance, isLoading: fheLoading, error: fheError } = useZamaInstance();
   const { signerPromise } = useEthersSigner();
+  const { vaultBalance, loadVaultBalance } = useVault();
   const [state, setState] = useState<BettingState>({
     games: [],
     userBets: [],
@@ -72,6 +74,12 @@ export const useBetting = () => {
       throw new Error('Wallet signer not available');
     }
 
+    // Check vault balance before placing bet
+    const currentVaultBalance = parseFloat(vaultBalance);
+    if (currentVaultBalance < amount) {
+      throw new Error(`Insufficient vault balance. You have ${vaultBalance} USDC, need ${amount} USDC. Please deposit to vault first.`);
+    }
+
     setState(prev => ({ ...prev, loading: true, error: null }));
     try {
       const betId = await fheContractService.placeBetWithFHE(
@@ -88,6 +96,7 @@ export const useBetting = () => {
         // Reload data after successful bet placement
         setTimeout(() => {
           loadGames();
+          loadVaultBalance(); // Reload vault balance after bet
           if (address && isConnected) {
             loadUserBets();
           }
@@ -141,8 +150,9 @@ export const useBetting = () => {
     loadGames,
     loadUserBets,
     isConnected,
-            fheReady: !fheLoading && !!instance,
+    fheReady: !fheLoading && !!instance,
     fheLoading,
-    fheError
+    fheError,
+    vaultBalance
   };
 };

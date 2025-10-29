@@ -57,6 +57,9 @@ contract StadiumVaultBet is SepoliaConfig {
     mapping(address => euint32) public userTotalWinnings;
     mapping(address => euint32) public userWinCount;
     
+    // Vault functionality
+    mapping(address => uint256) public userVaultBalance; // User's USDC balance in vault
+    
     uint256 public gameCounter;
     uint256 public betCounter;
     
@@ -74,6 +77,8 @@ contract StadiumVaultBet is SepoliaConfig {
     event BetSettled(uint256 indexed betId, bool isWinner);
     event ReputationUpdated(address indexed user);
     event OddsUpdated(uint256 indexed gameId);
+    event VaultDeposit(address indexed user, uint256 amount);
+    event VaultWithdrawal(address indexed user, uint256 amount);
     
     constructor(address _oracle, address _usdcToken) {
         owner = msg.sender;
@@ -94,6 +99,26 @@ contract StadiumVaultBet is SepoliaConfig {
     modifier validGame(uint256 gameId) {
         require(gameId < gameCounter, "Game does not exist");
         _;
+    }
+    
+    // Vault Functions
+    function depositToVault(uint256 amount) external {
+        require(amount > 0, "Amount must be greater than 0");
+        require(usdcToken.transferFrom(msg.sender, address(this), amount), "USDC transfer failed");
+        userVaultBalance[msg.sender] += amount;
+        emit VaultDeposit(msg.sender, amount);
+    }
+    
+    function withdrawFromVault(uint256 amount) external {
+        require(amount > 0, "Amount must be greater than 0");
+        require(userVaultBalance[msg.sender] >= amount, "Insufficient vault balance");
+        userVaultBalance[msg.sender] -= amount;
+        require(usdcToken.transfer(msg.sender, amount), "USDC transfer failed");
+        emit VaultWithdrawal(msg.sender, amount);
+    }
+    
+    function getVaultBalance(address user) external view returns (uint256) {
+        return userVaultBalance[user];
     }
     
     modifier validBet(uint256 betId) {
@@ -185,11 +210,12 @@ contract StadiumVaultBet is SepoliaConfig {
         euint32 internalAmount = FHE.fromExternal(amount, inputProof);
         euint8 internalTeamSelection = FHE.fromExternal(teamSelection, inputProof);
         
-        // Transfer USDC from bettor to contract (vault)
-        // Note: We need to decrypt the amount for the transfer
+        // Deduct USDC from user's vault balance
+        // Note: For FHE implementation, we need to decrypt the amount first
         // For now, we'll use a fixed amount and handle FHE decryption in the frontend
         uint256 usdcAmount = MIN_BET_AMOUNT; // Default to minimum bet
-        usdcToken.safeTransferFrom(msg.sender, address(this), usdcAmount);
+        require(userVaultBalance[msg.sender] >= usdcAmount, "Insufficient vault balance");
+        userVaultBalance[msg.sender] -= usdcAmount;
         
         // Get the appropriate odds based on team selection
         euint32 selectedOdds = FHE.select(

@@ -296,6 +296,52 @@ export class FheContractService {
     return Number(await contract.getBetCount());
   }
 
+  // Vault Functions
+  async depositToVault(amount: string | number): Promise<void> {
+    if (!this.signer) throw new Error('Signer not initialized');
+    
+    const contract = new ethers.Contract(
+      CONTRACT_ADDRESSES.StadiumVaultBet,
+      CONTRACT_ABIS.StadiumVaultBet,
+      this.signer
+    );
+    
+    // First approve USDC transfer
+    await this.approveUSDC(CONTRACT_ADDRESSES.StadiumVaultBet, amount);
+    
+    // Deposit to vault
+    const amountWei = ethers.parseUnits(String(amount), 6);
+    const tx = await contract.depositToVault(amountWei);
+    await tx.wait();
+  }
+
+  async withdrawFromVault(amount: string | number): Promise<void> {
+    if (!this.signer) throw new Error('Signer not initialized');
+    
+    const contract = new ethers.Contract(
+      CONTRACT_ADDRESSES.StadiumVaultBet,
+      CONTRACT_ABIS.StadiumVaultBet,
+      this.signer
+    );
+    
+    const amountWei = ethers.parseUnits(String(amount), 6);
+    const tx = await contract.withdrawFromVault(amountWei);
+    await tx.wait();
+  }
+
+  async getVaultBalance(userAddress: string): Promise<string> {
+    if (!this.provider) throw new Error('Provider not initialized');
+    
+    const contract = new ethers.Contract(
+      CONTRACT_ADDRESSES.StadiumVaultBet,
+      CONTRACT_ABIS.StadiumVaultBet,
+      this.provider
+    );
+    
+    const balance = await contract.getVaultBalance(userAddress);
+    return ethers.formatUnits(balance, 6);
+  }
+
   // Get all games from contract
   async getGames(): Promise<FHEGame[]> {
     if (!this.provider) throw new Error('Provider not initialized');
