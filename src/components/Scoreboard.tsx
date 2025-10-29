@@ -80,14 +80,6 @@ export const Scoreboard = () => {
         let status = 'upcoming';
         let timeRemaining = '';
         
-        console.log(`Scoreboard - Game ${game.id}:`, {
-          homeTeam: game.homeTeam,
-          startTime: game.startTime,
-          endTime: game.endTime,
-          now: now,
-          startDate: new Date(game.startTime * 1000).toLocaleString(),
-          endDate: new Date(game.endTime * 1000).toLocaleString()
-        });
         
         if (now >= game.startTime && now < game.endTime) {
           status = 'live';

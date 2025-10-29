@@ -241,11 +241,6 @@ export class FheContractService {
           const startTime = Number(basicInfo.startTime.toString());
           const endTime = Number(basicInfo.endTime.toString());
           
-          console.log(`Game ${i} - Raw startTime: ${basicInfo.startTime}, converted: ${startTime}`);
-          console.log(`Game ${i} - Raw endTime: ${basicInfo.endTime}, converted: ${endTime}`);
-          console.log(`Game ${i} - Date startTime: ${new Date(startTime * 1000).toLocaleString()}`);
-          console.log(`Game ${i} - Date endTime: ${new Date(endTime * 1000).toLocaleString()}`);
-          
           games.push({
             id: i,
             homeTeam: gameData.homeTeam,
