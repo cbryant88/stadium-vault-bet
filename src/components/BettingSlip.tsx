@@ -33,11 +33,13 @@ export const BettingSlip = () => {
   // Listen for bet events from Scoreboard
   useEffect(() => {
     const handleAddBetToSlip = (event: CustomEvent) => {
+      console.log('🎯 BettingSlip: Received addBetToSlip event:', event.detail);
       const { gameId, team, opponent, odds, teamSelection } = event.detail;
       
       // Check if bet already exists for this game and team
       const existingBet = bets.find(bet => bet.gameId === gameId && bet.teamSelection === teamSelection);
       if (existingBet) {
+        console.log('⚠️ BettingSlip: Bet already exists:', existingBet);
         toast({
           title: "Bet Already Added",
           description: "This bet is already in your betting slip",
@@ -56,12 +58,19 @@ export const BettingSlip = () => {
         teamSelection
       };
       
-      setBets(prev => [...prev, newBet]);
+      console.log('✅ BettingSlip: Adding new bet:', newBet);
+      setBets(prev => {
+        const updated = [...prev, newBet];
+        console.log('📊 BettingSlip: Updated bets array:', updated);
+        return updated;
+      });
     };
 
+    console.log('🔗 BettingSlip: Adding event listener for addBetToSlip');
     window.addEventListener('addBetToSlip', handleAddBetToSlip as EventListener);
     
     return () => {
+      console.log('🔌 BettingSlip: Removing event listener for addBetToSlip');
       window.removeEventListener('addBetToSlip', handleAddBetToSlip as EventListener);
     };
   }, [bets, toast]);

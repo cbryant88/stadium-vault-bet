@@ -12,6 +12,8 @@ export const Scoreboard = () => {
 
   // Function to add bet to betting slip
   const addBetToSlip = (gameId: string, team: string, opponent: string, odds: number, teamSelection: 'home' | 'away' | 'draw') => {
+    console.log('🎯 Scoreboard: Adding bet to slip:', { gameId, team, opponent, odds, teamSelection });
+    
     // Create a custom event to communicate with BettingSlip component
     const betEvent = new CustomEvent('addBetToSlip', {
       detail: {
@@ -22,6 +24,8 @@ export const Scoreboard = () => {
         teamSelection
       }
     });
+    
+    console.log('📡 Scoreboard: Dispatching addBetToSlip event:', betEvent);
     window.dispatchEvent(betEvent);
     
     toast({
