@@ -111,7 +111,7 @@ export class FheContractService {
     const amountWei = ethers.parseUnits(String(amount), 6);
     const tx = await usdcContract.approve(spender, amountWei);
     await tx.wait();
-  }
+    }
 
   async placeBetWithFHE(
     gameId: number,

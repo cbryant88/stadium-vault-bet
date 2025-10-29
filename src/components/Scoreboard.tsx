@@ -97,29 +97,29 @@ export const Scoreboard = () => {
         }
 
         return (
-          <Card key={game.id} className="bg-gradient-scoreboard border-stadium-glow/20 p-4 shadow-scoreboard animate-scoreboard-flicker">
-            <div className="space-y-3">
-              {/* Game Header */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Badge 
+        <Card key={game.id} className="bg-gradient-scoreboard border-stadium-glow/20 p-4 shadow-scoreboard animate-scoreboard-flicker">
+          <div className="space-y-3">
+            {/* Game Header */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Badge 
                     variant={status === "live" ? "default" : "secondary"}
                     className={status === "live" ? "bg-stadium-live text-background animate-live-pulse" : ""}
-                  >
+                >
                     {status === "live" ? "LIVE" : status.toUpperCase()}
-                  </Badge>
+                </Badge>
                   {timeRemaining && (
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <Clock className="w-3 h-3" />
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <Clock className="w-3 h-3" />
                       <span>{timeRemaining}</span>
-                    </div>
-                  )}
-                </div>
-                <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <Users className="w-3 h-3" />
-                  <span>0 bets</span>
-                </div>
+                  </div>
+                )}
               </div>
+              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Users className="w-3 h-3" />
+                  <span>0 bets</span>
+              </div>
+            </div>
 
             {/* Score Display */}
             <div className="grid grid-cols-3 gap-4 items-center">

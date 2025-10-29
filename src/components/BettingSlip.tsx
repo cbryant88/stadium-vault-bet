@@ -194,19 +194,19 @@ export const BettingSlip = () => {
       {/* USDC Manager */}
       <USDCManager onBalanceUpdate={setUserUSDCBalance} />
       
-      <Card className="bg-gradient-scoreboard border-stadium-glow/20 shadow-scoreboard">
-        <div className="p-4 border-b border-border/50">
-          <div className="flex items-center gap-2">
-            <Shield className="w-5 h-5 text-stadium-glow" />
-            <h3 className="font-semibold">Encrypted Betting Slip</h3>
-            <Badge variant="secondary" className="bg-stadium-glow/10 text-stadium-glow text-xs">
-              FHE Protected
-            </Badge>
-          </div>
+    <Card className="bg-gradient-scoreboard border-stadium-glow/20 shadow-scoreboard">
+      <div className="p-4 border-b border-border/50">
+        <div className="flex items-center gap-2">
+          <Shield className="w-5 h-5 text-stadium-glow" />
+          <h3 className="font-semibold">Encrypted Betting Slip</h3>
+          <Badge variant="secondary" className="bg-stadium-glow/10 text-stadium-glow text-xs">
+            FHE Protected
+          </Badge>
+        </div>
           <div className="mt-2 text-sm text-muted-foreground">
             Your USDC Balance: <span className="font-mono text-green-600">{userUSDCBalance} USDC</span>
           </div>
-        </div>
+      </div>
 
       <div className="p-4 space-y-4">
         {bets.length === 0 ? (
@@ -354,7 +354,7 @@ export const BettingSlip = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      </Card>
+    </Card>
     </div>
   );
 };
