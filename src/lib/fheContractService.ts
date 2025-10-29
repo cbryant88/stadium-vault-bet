@@ -116,14 +116,34 @@ export class FheContractService {
   async placeBetWithFHE(
     gameId: number,
     amount: string | number,
-    teamSelection: number,
+    teamSelection: string | number,
     instance: FhevmInstance,
     signerPromise: Promise<any>,
     userAddress: string
   ): Promise<number> {
     try {
       // Convert team selection to number
-      const teamSelectionNum = Number(teamSelection);
+      let teamSelectionNum: number;
+      if (typeof teamSelection === 'string') {
+        switch (teamSelection.toLowerCase()) {
+          case 'home':
+            teamSelectionNum = 0;
+            break;
+          case 'away':
+            teamSelectionNum = 1;
+            break;
+          case 'draw':
+            teamSelectionNum = 2;
+            break;
+          default:
+            throw new Error(`Invalid team selection: ${teamSelection}`);
+        }
+      } else {
+        teamSelectionNum = Number(teamSelection);
+        if (isNaN(teamSelectionNum)) {
+          throw new Error(`Invalid team selection number: ${teamSelection}`);
+        }
+      }
       
       // Get signer first to get user address
       const signer = await signerPromise;
