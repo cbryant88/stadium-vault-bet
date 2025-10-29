@@ -80,7 +80,7 @@ export class FheContractService {
     await tx.wait();
   }
 
-  async approveUSDC(spender: string, amount: string): Promise<void> {
+  async approveUSDC(spender: string, amount: string | number): Promise<void> {
     if (!this.signer) throw new Error('Signer not initialized');
     
     const usdcContract = new ethers.Contract(
@@ -89,14 +89,14 @@ export class FheContractService {
       this.signer
     );
     
-    const amountWei = ethers.parseUnits(amount, 6);
+    const amountWei = ethers.parseUnits(String(amount), 6);
     const tx = await usdcContract.approve(spender, amountWei);
     await tx.wait();
   }
 
   async placeBetWithFHE(
     gameId: number,
-    amount: string,
+    amount: string | number,
     teamSelection: number,
     instance: FhevmInstance,
     signerPromise: Promise<any>,
@@ -125,7 +125,8 @@ export class FheContractService {
       console.log('✅ Encrypted input created');
       
       // Add amount and team selection to encrypted input
-      const amountBigInt = BigInt(ethers.parseUnits(amount, 6).toString());
+      const amountStr = String(amount);
+      const amountBigInt = BigInt(ethers.parseUnits(amountStr, 6).toString());
       console.log('📊 Adding amount:', amountBigInt.toString());
       input.add32(amountBigInt);
       
