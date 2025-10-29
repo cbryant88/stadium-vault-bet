@@ -99,7 +99,8 @@ export class FheContractService {
     amount: string,
     teamSelection: number,
     instance: FhevmInstance,
-    signerPromise: Promise<any>
+    signerPromise: Promise<any>,
+    userAddress: string
   ): Promise<number> {
     try {
       // Convert team selection to number
@@ -113,19 +114,7 @@ export class FheContractService {
       console.log('📊 Signer methods:', Object.getOwnPropertyNames(signer));
       console.log('📊 Signer prototype methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(signer)));
       
-      // Try different methods to get address
-      let userAddress;
-      if (typeof signer.getAddress === 'function') {
-        userAddress = await signer.getAddress();
-      } else if (typeof signer.address === 'string') {
-        userAddress = signer.address;
-      } else if (signer.account && signer.account.address) {
-        userAddress = signer.account.address;
-      } else {
-        throw new Error('Cannot get user address from signer');
-      }
-      
-      console.log('📊 User address:', userAddress);
+      console.log('📊 Using provided user address:', userAddress);
       
       // Create encrypted input with contract address and user address
       console.log('🔄 Creating encrypted input...');
@@ -173,11 +162,18 @@ export class FheContractService {
       
       // Place bet with encrypted data
       console.log('🔄 Placing bet on contract...');
+      console.log('📊 Contract parameters:', {
+        gameId,
+        amountHandle: handles[0],
+        teamSelectionHandle: handles[1],
+        proofLength: inputProof.length
+      });
+      
       const tx = await contract.placeBet(
         gameId,
-        handles[0], // amount handle
-        handles[1], // team selection handle
-        inputProof
+        handles[0], // amount handle (bytes32)
+        handles[1], // team selection handle (bytes32) 
+        inputProof  // input proof (bytes)
       );
       
       console.log('🔄 Waiting for transaction confirmation...');

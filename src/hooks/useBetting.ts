@@ -74,16 +74,16 @@ export const useBetting = () => {
 
     setState(prev => ({ ...prev, loading: true, error: null }));
     try {
-      const result = await fheContractService.placeBetWithFHE(
+      const betId = await fheContractService.placeBetWithFHE(
         gameId, 
-        teamSelection, 
         amount, 
-        address, 
+        teamSelection, 
         instance, 
-        signerPromise
+        signerPromise,
+        address
       );
       
-      if (result.success) {
+      if (betId) {
         setState(prev => ({ ...prev, loading: false }));
         // Reload data after successful bet placement
         setTimeout(() => {
@@ -92,14 +92,14 @@ export const useBetting = () => {
             loadUserBets();
           }
         }, 100);
-        return result;
+        return { success: true, betId };
       } else {
         setState(prev => ({ 
           ...prev, 
           loading: false, 
-          error: result.error || 'Failed to place bet' 
+          error: 'Failed to place bet' 
         }));
-        throw new Error(result.error || 'Failed to place bet');
+        throw new Error('Failed to place bet');
       }
     } catch (error) {
       setState(prev => ({ 
