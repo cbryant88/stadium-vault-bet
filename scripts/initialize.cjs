@@ -66,16 +66,39 @@ async function main() {
     }
   ];
   
+  // Try to create games with error handling
   for (let i = 0; i < games.length; i++) {
     const game = games[i];
-    const tx = await stadiumVault.createGame(
-      game.homeTeam,
-      game.awayTeam,
-      game.startTime,
-      game.endTime
-    );
-    await tx.wait();
-    console.log(`✅ Game ${i + 1} created: ${game.homeTeam} vs ${game.awayTeam}`);
+    try {
+      console.log(`🔄 Creating game ${i + 1}: ${game.homeTeam} vs ${game.awayTeam}`);
+      const tx = await stadiumVault.createGame(
+        game.homeTeam,
+        game.awayTeam,
+        game.startTime,
+        game.endTime
+      );
+      const receipt = await tx.wait();
+      console.log(`✅ Game ${i + 1} created successfully. Gas used: ${receipt.gasUsed}`);
+    } catch (error) {
+      console.error(`❌ Failed to create game ${i + 1}:`, error.message);
+      console.error(`Error details:`, {
+        code: error.code,
+        reason: error.reason,
+        data: error.data,
+        stack: error.stack
+      });
+      
+      // Try to get more details about the transaction
+      if (error.transaction) {
+        console.error(`Transaction details:`, {
+          to: error.transaction.to,
+          data: error.transaction.data,
+          value: error.transaction.value,
+          gasLimit: error.transaction.gasLimit
+        });
+      }
+      // Continue with other games even if one fails
+    }
   }
   
   // Set initial odds for games
@@ -99,9 +122,26 @@ async function main() {
   await usdcToken.faucet(deployer.address, faucetAmount);
   console.log("✅ Distributed 1000 USDC to deployer");
   
+  // Deposit some USDC to vault for testing
+  console.log("\n🏦 Depositing USDC to vault...");
+  const depositAmount = ethers.parseUnits("500", 6); // 500 USDC
+  try {
+    // First approve the transfer
+    const approveTx = await usdcToken.approve(stadiumAddress, depositAmount);
+    await approveTx.wait();
+    console.log("✅ USDC transfer approved");
+    
+    // Then deposit to vault
+    const depositTx = await stadiumVault.depositToVault(depositAmount);
+    await depositTx.wait();
+    console.log("✅ Deposited 500 USDC to vault");
+  } catch (error) {
+    console.error("❌ Failed to deposit to vault:", error.message);
+  }
+  
   // Check balances
   const deployerBalance = await usdcToken.balanceOf(deployer.address);
-  const vaultBalance = await stadiumVault.getUSDCBalance();
+  const vaultBalance = await stadiumVault.getVaultBalance(deployer.address);
   
   console.log("\n📊 Final Balances:");
   console.log("Deployer USDC balance:", ethers.formatUnits(deployerBalance, 6), "USDC");

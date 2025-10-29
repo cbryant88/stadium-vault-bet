@@ -139,21 +139,23 @@ contract StadiumVaultBet is SepoliaConfig {
         
         uint256 gameId = gameCounter++;
         
+        // Create game with minimal FHE operations for testing
         games[gameId] = Game({
             gameId: FHE.asEuint32(uint32(gameId)),
             homeTeam: _homeTeam,
             awayTeam: _awayTeam,
             homeScore: FHE.asEuint32(0),
             awayScore: FHE.asEuint32(0),
-            homeOdds: FHE.asEuint32(180), // Set default odds
-            awayOdds: FHE.asEuint32(200), // Set default odds
-            drawOdds: FHE.asEuint32(320), // Set default odds
+            homeOdds: FHE.asEuint32(180),
+            awayOdds: FHE.asEuint32(200),
+            drawOdds: FHE.asEuint32(320),
             isActive: FHE.asEbool(true),
             isFinished: FHE.asEbool(false),
             startTime: _startTime,
             endTime: _endTime
         });
         
+        // Create betting pool with minimal FHE operations
         bettingPools[gameId] = BettingPool({
             totalBets: FHE.asEuint32(0),
             totalAmount: FHE.asEuint32(0),

@@ -30,6 +30,13 @@ const config = {
   fhevm: {
     network: "sepolia",
   },
+  // Add FHE support for local testing
+  localhost: {
+    url: "http://127.0.0.1:8545",
+    fhevm: {
+      enabled: true
+    }
+  },
 };
 
 module.exports = config;
