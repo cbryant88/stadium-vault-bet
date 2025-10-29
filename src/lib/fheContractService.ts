@@ -198,10 +198,8 @@ export class FheContractService {
         signer
       );
       
-      // First approve USDC transfer
-      console.log('🔄 Approving USDC transfer...');
-      await this.approveUSDC(CONTRACT_ADDRESSES.StadiumVaultBet, amount);
-      console.log('✅ USDC transfer approved');
+      // Note: No need to approve USDC transfer as we're using vault balance
+      // The contract will deduct from user's vault balance directly
       
       // Place bet with encrypted data
       console.log('🔄 Placing bet on contract...');
@@ -216,7 +214,8 @@ export class FheContractService {
         gameId,
         handles[0], // amount handle (bytes32)
         handles[1], // team selection handle (bytes32) 
-        inputProof  // input proof (bytes)
+        inputProof, // input proof (bytes)
+        amountBigInt // usdcAmount (uint256) - amount to deduct from vault
       );
       
       console.log('🔄 Waiting for transaction confirmation...');

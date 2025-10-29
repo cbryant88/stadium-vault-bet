@@ -201,7 +201,8 @@ contract StadiumVaultBet is SepoliaConfig {
         uint256 gameId,
         externalEuint32 amount,
         externalEuint8 teamSelection,
-        bytes calldata inputProof
+        bytes calldata inputProof,
+        uint256 usdcAmount
     ) public validGame(gameId) returns (uint256) {
         Game storage game = games[gameId];
         require(block.timestamp < game.endTime, "Game has ended");
@@ -212,10 +213,8 @@ contract StadiumVaultBet is SepoliaConfig {
         euint32 internalAmount = FHE.fromExternal(amount, inputProof);
         euint8 internalTeamSelection = FHE.fromExternal(teamSelection, inputProof);
         
-        // Deduct USDC from user's vault balance
-        // Note: For FHE implementation, we need to decrypt the amount first
-        // For now, we'll use a fixed amount and handle FHE decryption in the frontend
-        uint256 usdcAmount = MIN_BET_AMOUNT; // Default to minimum bet
+        // Deduct USDC from user's vault balance using the provided amount
+        require(usdcAmount >= MIN_BET_AMOUNT, "Bet amount below minimum");
         require(userVaultBalance[msg.sender] >= usdcAmount, "Insufficient vault balance");
         userVaultBalance[msg.sender] -= usdcAmount;
         
