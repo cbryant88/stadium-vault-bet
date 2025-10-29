@@ -22,26 +22,42 @@ async function main() {
   const stadiumAddress = await stadiumVault.getAddress();
   console.log("✅ StadiumVaultBet deployed at:", stadiumAddress);
   
-  // Create test games
-  console.log("\n⚽ Creating test games...");
+  // Create test games (spread over next 30 days)
+  console.log("\n⚽ Creating test games for the next 30 days...");
+  const now = Math.floor(Date.now() / 1000);
+  const oneDay = 24 * 60 * 60; // 1 day in seconds
+  const gameDuration = 2 * 60 * 60; // 2 hours game duration
+
   const games = [
     {
       homeTeam: "Manchester United",
       awayTeam: "Liverpool",
-      startTime: Math.floor(Date.now() / 1000) + 3600, // 1 hour from now
-      endTime: Math.floor(Date.now() / 1000) + 7200    // 2 hours from now
+      startTime: now + (7 * oneDay), // 7 days from now
+      endTime: now + (7 * oneDay) + gameDuration
     },
     {
       homeTeam: "Barcelona",
       awayTeam: "Real Madrid",
-      startTime: Math.floor(Date.now() / 1000) + 7200, // 2 hours from now
-      endTime: Math.floor(Date.now() / 1000) + 10800   // 3 hours from now
+      startTime: now + (14 * oneDay), // 14 days from now
+      endTime: now + (14 * oneDay) + gameDuration
     },
     {
       homeTeam: "Arsenal",
       awayTeam: "Chelsea",
-      startTime: Math.floor(Date.now() / 1000) + 10800, // 3 hours from now
-      endTime: Math.floor(Date.now() / 1000) + 14400    // 4 hours from now
+      startTime: now + (21 * oneDay), // 21 days from now
+      endTime: now + (21 * oneDay) + gameDuration
+    },
+    {
+      homeTeam: "Bayern Munich",
+      awayTeam: "Borussia Dortmund",
+      startTime: now + (28 * oneDay), // 28 days from now
+      endTime: now + (28 * oneDay) + gameDuration
+    },
+    {
+      homeTeam: "AC Milan",
+      awayTeam: "Inter Milan",
+      startTime: now + (30 * oneDay), // 30 days from now
+      endTime: now + (30 * oneDay) + gameDuration
     }
   ];
   

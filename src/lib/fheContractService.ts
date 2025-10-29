@@ -212,7 +212,7 @@ export class FheContractService {
     return Number(await contract.getBetCount());
   }
 
-  // Get all games
+  // Get all games from contract
   async getGames(): Promise<FHEGame[]> {
     if (!this.provider) throw new Error('Provider not initialized');
     
@@ -220,38 +220,9 @@ export class FheContractService {
       const gameCount = await this.getGameCount();
       console.log('Game count from contract:', gameCount);
       
-      // If no games in contract, return mock games for testing
       if (gameCount === 0) {
-        console.log('No games in contract, returning mock games');
-        return [
-          {
-            id: 0,
-            homeTeam: "Manchester United",
-            awayTeam: "Liverpool",
-            startTime: Math.floor(Date.now() / 1000) + 3600, // 1 hour from now
-            endTime: Math.floor(Date.now() / 1000) + 7200,   // 2 hours from now
-            isActive: true,
-            isFinished: false
-          },
-          {
-            id: 1,
-            homeTeam: "Barcelona",
-            awayTeam: "Real Madrid",
-            startTime: Math.floor(Date.now() / 1000) + 7200, // 2 hours from now
-            endTime: Math.floor(Date.now() / 1000) + 10800,  // 3 hours from now
-            isActive: true,
-            isFinished: false
-          },
-          {
-            id: 2,
-            homeTeam: "Arsenal",
-            awayTeam: "Chelsea",
-            startTime: Math.floor(Date.now() / 1000) + 10800, // 3 hours from now
-            endTime: Math.floor(Date.now() / 1000) + 14400,   // 4 hours from now
-            isActive: true,
-            isFinished: false
-          }
-        ];
+        console.log('No games in contract');
+        return [];
       }
       
       const contract = new ethers.Contract(
@@ -284,36 +255,7 @@ export class FheContractService {
       return games;
     } catch (error) {
       console.error('Error loading games:', error);
-      // Return mock games as fallback
-      return [
-        {
-          id: 0,
-          homeTeam: "Manchester United",
-          awayTeam: "Liverpool",
-          startTime: Math.floor(Date.now() / 1000) + 3600,
-          endTime: Math.floor(Date.now() / 1000) + 7200,
-          isActive: true,
-          isFinished: false
-        },
-        {
-          id: 1,
-          homeTeam: "Barcelona",
-          awayTeam: "Real Madrid",
-          startTime: Math.floor(Date.now() / 1000) + 7200,
-          endTime: Math.floor(Date.now() / 1000) + 10800,
-          isActive: true,
-          isFinished: false
-        },
-        {
-          id: 2,
-          homeTeam: "Arsenal",
-          awayTeam: "Chelsea",
-          startTime: Math.floor(Date.now() / 1000) + 10800,
-          endTime: Math.floor(Date.now() / 1000) + 14400,
-          isActive: true,
-          isFinished: false
-        }
-      ];
+      return [];
     }
   }
 
@@ -387,6 +329,50 @@ export class FheContractService {
       };
     } catch (error) {
       console.error('Error loading betting pool:', error);
+      throw error;
+    }
+  }
+
+  // Create a new game
+  async createGame(
+    homeTeam: string,
+    awayTeam: string,
+    startTime: number,
+    endTime: number,
+    signer: ethers.Signer
+  ): Promise<number> {
+    if (!signer) throw new Error('Signer not initialized');
+    
+    const contract = new ethers.Contract(
+      CONTRACT_ADDRESSES.StadiumVaultBet,
+      CONTRACT_ABIS.StadiumVaultBet,
+      signer
+    );
+    
+    try {
+      const tx = await contract.createGame(homeTeam, awayTeam, startTime, endTime);
+      const receipt = await tx.wait();
+      
+      // Extract game ID from events
+      const gameCreatedEvent = receipt.logs.find(log => {
+        try {
+          const parsed = contract.interface.parseLog(log);
+          return parsed?.name === 'GameCreated';
+        } catch {
+          return false;
+        }
+      });
+      
+      if (gameCreatedEvent) {
+        const parsed = contract.interface.parseLog(gameCreatedEvent);
+        return Number(parsed?.args.gameId);
+      }
+      
+      // Fallback: return the current game count - 1
+      const gameCount = await this.getGameCount();
+      return gameCount - 1;
+    } catch (error) {
+      console.error('Error creating game:', error);
       throw error;
     }
   }
