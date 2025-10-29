@@ -113,7 +113,7 @@ export function useZamaInstance() {
           console.warn('⚠️ FHE initialization failed, running in limited mode without encryption');
         }
       } finally {
-        if (mounted && !isLoading) {
+        if (mounted) {
           setIsLoading(false);
         }
       }
