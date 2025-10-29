@@ -238,8 +238,8 @@ export class FheContractService {
           const gameData = await contract.games(i);
           const basicInfo = await contract.getGameBasicInfo(i);
           
-          const startTime = Number(basicInfo.startTime);
-          const endTime = Number(basicInfo.endTime);
+          const startTime = Number(basicInfo.startTime.toString());
+          const endTime = Number(basicInfo.endTime.toString());
           
           console.log(`Game ${i} - Raw startTime: ${basicInfo.startTime}, converted: ${startTime}`);
           console.log(`Game ${i} - Raw endTime: ${basicInfo.endTime}, converted: ${endTime}`);
