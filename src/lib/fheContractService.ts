@@ -113,45 +113,102 @@ export class FheContractService {
 
   private async ensureSignerReady() {
     await this.ensureInitialized();
-    if (!this.browserProvider && typeof window !== 'undefined' && (window as any).ethereum) {
+    
+    // 确保在浏览器环境中
+    if (typeof window === 'undefined') {
+      throw new Error('Signer requires browser environment');
+    }
+
+    // 检查钱包是否可用
+    if (!(window as any).ethereum) {
+      throw new Error('MetaMask or other wallet is not installed. Please install a wallet extension.');
+    }
+
+    // 创建或获取 browserProvider
+    if (!this.browserProvider) {
       this.browserProvider = new ethers.BrowserProvider((window as any).ethereum);
     }
-    if (typeof window !== 'undefined' && (window as any).ethereum?.request) {
-      try { await (window as any).ethereum.request({ method: 'eth_requestAccounts' }); } catch (_) {}
 
-      // 检查当前链并确保为 Sepolia，否则切换/添加
-      try {
-        const net = await (this.browserProvider ?? this.provider)!.getNetwork();
-        const sepoliaHex = '0xaa36a7'; // 11155111
-        if (!net || net.chainId !== 11155111n) {
-          try {
-            await (window as any).ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: sepoliaHex }] });
-          } catch (err: any) {
-            // 4902: 未添加该链，尝试添加后再切换
-            if (err && (err.code === 4902 || err.message?.includes('Unrecognized chain ID'))) {
-              const rpcUrl = (import.meta as any)?.env?.VITE_RPC_URL || 'https://1rpc.io/sepolia';
-              try {
-                await (window as any).ethereum.request({
-                  method: 'wallet_addEthereumChain',
-                  params: [{
-                    chainId: sepoliaHex,
-                    chainName: 'Sepolia',
-                    nativeCurrency: { name: 'Sepolia Ether', symbol: 'ETH', decimals: 18 },
-                    rpcUrls: [rpcUrl],
-                    blockExplorerUrls: ['https://sepolia.etherscan.io']
-                  }]
-                });
-                await (window as any).ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: sepoliaHex }] });
-              } catch (_) {}
+    // 请求账户连接（这会弹出 MetaMask 授权窗口）
+    try {
+      await (window as any).ethereum.request({ method: 'eth_requestAccounts' });
+    } catch (err: any) {
+      if (err.code === 4001) {
+        throw new Error('Please connect your wallet to continue.');
+      }
+      throw new Error(`Failed to connect wallet: ${err.message || 'Unknown error'}`);
+    }
+
+    // 检查当前链并确保为 Sepolia，否则切换/添加
+    try {
+      const net = await this.browserProvider.getNetwork();
+      const sepoliaHex = '0xaa36a7'; // 11155111
+      if (!net || net.chainId !== 11155111n) {
+        try {
+          await (window as any).ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: sepoliaHex }] });
+          // 等待网络切换完成
+          await new Promise(resolve => setTimeout(resolve, 500));
+        } catch (err: any) {
+          // 4902: 未添加该链，尝试添加后再切换
+          if (err && (err.code === 4902 || err.message?.includes('Unrecognized chain ID'))) {
+            const rpcUrl = (import.meta as any)?.env?.VITE_RPC_URL || 'https://1rpc.io/sepolia';
+            try {
+              await (window as any).ethereum.request({
+                method: 'wallet_addEthereumChain',
+                params: [{
+                  chainId: sepoliaHex,
+                  chainName: 'Sepolia',
+                  nativeCurrency: { name: 'Sepolia Ether', symbol: 'ETH', decimals: 18 },
+                  rpcUrls: [rpcUrl],
+                  blockExplorerUrls: ['https://sepolia.etherscan.io']
+                }]
+              });
+              await (window as any).ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: sepoliaHex }] });
+              // 等待网络切换完成
+              await new Promise(resolve => setTimeout(resolve, 500));
+            } catch (addErr: any) {
+              throw new Error(`Failed to add Sepolia network: ${addErr.message || 'Unknown error'}`);
             }
+          } else {
+            throw new Error(`Failed to switch to Sepolia network: ${err.message || 'Unknown error'}`);
           }
         }
-      } catch (_) {}
+      }
+    } catch (err: any) {
+      // 如果是我们自己的错误，直接抛出
+      if (err.message && err.message.includes('Failed to')) {
+        throw err;
+      }
+      // 其他网络错误，记录但不阻止继续
+      console.warn('Network check error:', err);
     }
-    if (this.browserProvider && !this.signer) {
-      try { this.signer = await this.browserProvider.getSigner(); } catch (_) {}
+
+    // 获取 signer，如果失败则重试
+    if (!this.signer) {
+      try {
+        this.signer = await this.browserProvider.getSigner();
+      } catch (err: any) {
+        // 如果第一次失败，等待一下再重试
+        await new Promise(resolve => setTimeout(resolve, 500));
+        try {
+          this.signer = await this.browserProvider.getSigner();
+        } catch (retryErr: any) {
+          throw new Error(`Failed to get signer: ${retryErr.message || 'Please make sure your wallet is connected and unlocked.'}`);
+        }
+      }
     }
-    if (!this.signer) throw new Error('Signer not initialized');
+
+    // 验证 signer 是否有效
+    if (!this.signer) {
+      throw new Error('Signer not initialized. Please connect your wallet and try again.');
+    }
+
+    // 验证 signer 是否有地址
+    try {
+      await this.signer.getAddress();
+    } catch (err: any) {
+      throw new Error(`Signer address not available: ${err.message || 'Please reconnect your wallet.'}`);
+    }
   }
 
   async getUSDCBalance(userAddress: string): Promise<string> {
