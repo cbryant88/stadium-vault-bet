@@ -44,11 +44,24 @@ export const USDCManager: React.FC<USDCManagerProps> = ({ onBalanceUpdate }) => 
   };
 
   const handleFaucet = async () => {
-    if (!address || !getSigner) return;
+    console.log('🔄 handleFaucet called', { address: !!address, getSigner: !!getSigner, faucetAmount });
+    
+    if (!address) {
+      console.warn('⚠️ No address available');
+      setError('Please connect your wallet first');
+      return;
+    }
+    
+    if (!getSigner) {
+      console.warn('⚠️ getSigner not available');
+      setError('Wallet signer not available. Please reconnect your wallet.');
+      return;
+    }
     
     try {
       setIsLoading(true);
       setError(null);
+      console.log('🔄 Getting signer from wagmi...');
       
       // Get signer from wagmi
       const signer = await getSigner();
@@ -56,12 +69,16 @@ export const USDCManager: React.FC<USDCManagerProps> = ({ onBalanceUpdate }) => 
         throw new Error('Signer not available');
       }
       
+      console.log('✅ Signer obtained, calling faucetUSDC...');
       await fheContractService.faucetUSDC(faucetAmount, signer);
+      
+      console.log('✅ Faucet successful, reloading balances...');
       await loadBalances();
       
+      console.log('✅ Successfully claimed USDC!');
       alert(`Successfully claimed ${faucetAmount} USDC!`);
     } catch (err) {
-      console.error('Error claiming USDC:', err);
+      console.error('❌ Error claiming USDC:', err);
       setError(err instanceof Error ? err.message : 'Failed to claim USDC');
     } finally {
       setIsLoading(false);
