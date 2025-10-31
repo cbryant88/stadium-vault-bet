@@ -375,11 +375,9 @@ export class FheContractService {
         }
       }
       
-      // Ensure wallet is authorized and signer ready
-      await this.ensureSignerReady();
-      const fallbackSigner = await signerPromise;
-      const signer = this.signer ?? fallbackSigner;
-      if (!signer) throw new Error('Signer not available');
+      // Get signer from the provided promise (from wagmi)
+      const signer = await signerPromise;
+      if (!signer) throw new Error('Signer not available. Please connect your wallet.');
       
       console.log('📊 Signer type:', typeof signer);
       console.log('📊 Signer methods:', Object.getOwnPropertyNames(signer));
