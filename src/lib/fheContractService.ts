@@ -119,29 +119,44 @@ export class FheContractService {
     const win = window as any;
     
     // 首先尝试直接访问 window.ethereum
-    if (win.ethereum && typeof win.ethereum.request === 'function') {
-      return win.ethereum;
-    }
-
-    // 如果有多个提供者（多个钱包扩展），尝试找到 MetaMask
-    if (win.ethereum?.providers && Array.isArray(win.ethereum.providers)) {
-      const metamaskProvider = win.ethereum.providers.find(
-        (p: any) => p.isMetaMask && typeof p.request === 'function'
-      );
-      if (metamaskProvider) return metamaskProvider;
+    if (win.ethereum) {
+      // 如果有多个提供者（多个钱包扩展），尝试找到 MetaMask
+      if (win.ethereum.providers && Array.isArray(win.ethereum.providers)) {
+        const metamaskProvider = win.ethereum.providers.find(
+          (p: any) => p.isMetaMask && typeof p.request === 'function'
+        );
+        if (metamaskProvider) return metamaskProvider;
+        
+        // 如果没有 MetaMask，返回第一个可用的提供者
+        const firstProvider = win.ethereum.providers.find(
+          (p: any) => typeof p.request === 'function'
+        );
+        if (firstProvider) return firstProvider;
+      }
       
-      // 如果没有 MetaMask，返回第一个可用的提供者
-      const firstProvider = win.ethereum.providers.find(
-        (p: any) => typeof p.request === 'function'
-      );
-      if (firstProvider) return firstProvider;
+      // 单个提供者
+      if (typeof win.ethereum.request === 'function') {
+        return win.ethereum;
+      }
     }
 
-    // 等待钱包注入（最多等待 2 秒）
-    for (let i = 0; i < 20; i++) {
+    // 等待钱包注入（最多等待 3 秒，增加等待时间）
+    for (let i = 0; i < 30; i++) {
       await new Promise(resolve => setTimeout(resolve, 100));
-      if (win.ethereum && typeof win.ethereum.request === 'function') {
-        return win.ethereum;
+      
+      if (win.ethereum) {
+        // 检查是否有多个提供者
+        if (win.ethereum.providers && Array.isArray(win.ethereum.providers)) {
+          const provider = win.ethereum.providers.find(
+            (p: any) => (p.isMetaMask || typeof p.request === 'function')
+          );
+          if (provider) return provider;
+        }
+        
+        // 单个提供者
+        if (typeof win.ethereum.request === 'function') {
+          return win.ethereum;
+        }
       }
     }
 
@@ -245,7 +260,14 @@ export class FheContractService {
     try {
       await this.signer.getAddress();
     } catch (err: any) {
-      throw new Error(`Signer address not available: ${err.message || 'Please reconnect your wallet.'}`);
+      // 如果 signer 获取地址失败，尝试重新获取
+      console.warn('Signer address check failed, retrying...', err);
+      try {
+        this.signer = await this.browserProvider.getSigner();
+        await this.signer.getAddress();
+      } catch (retryErr: any) {
+        throw new Error(`Signer address not available: ${retryErr.message || 'Please reconnect your wallet.'}`);
+      }
     }
   }
 
