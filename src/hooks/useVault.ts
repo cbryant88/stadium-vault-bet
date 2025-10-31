@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAccount } from 'wagmi';
 import { fheContractService } from '../lib/fheContractService';
+import { useEthersSigner } from './useEthersSigner';
 
 export function useVault() {
   const { address, isConnected } = useAccount();
+  const { getSigner } = useEthersSigner();
   const [vaultBalance, setVaultBalance] = useState<string>('0');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -28,14 +30,19 @@ export function useVault() {
   }, [address, isConnected]);
 
   const depositToVault = useCallback(async (amount: string | number) => {
-    if (!address || !isConnected) {
+    if (!address || !isConnected || !getSigner) {
       throw new Error('Wallet not connected');
     }
 
     try {
       setLoading(true);
       setError(null);
-      await fheContractService.depositToVault(amount);
+      // Get signer from wagmi
+      const signer = await getSigner();
+      if (!signer) {
+        throw new Error('Signer not available');
+      }
+      await fheContractService.depositToVault(amount, signer);
       // Reload balance after deposit
       await loadVaultBalance();
     } catch (err) {
@@ -45,17 +52,22 @@ export function useVault() {
     } finally {
       setLoading(false);
     }
-  }, [address, isConnected, loadVaultBalance]);
+  }, [address, isConnected, getSigner, loadVaultBalance]);
 
   const withdrawFromVault = useCallback(async (amount: string | number) => {
-    if (!address || !isConnected) {
+    if (!address || !isConnected || !getSigner) {
       throw new Error('Wallet not connected');
     }
 
     try {
       setLoading(true);
       setError(null);
-      await fheContractService.withdrawFromVault(amount);
+      // Get signer from wagmi
+      const signer = await getSigner();
+      if (!signer) {
+        throw new Error('Signer not available');
+      }
+      await fheContractService.withdrawFromVault(amount, signer);
       // Reload balance after withdrawal
       await loadVaultBalance();
     } catch (err) {
@@ -65,7 +77,7 @@ export function useVault() {
     } finally {
       setLoading(false);
     }
-  }, [address, isConnected, loadVaultBalance]);
+  }, [address, isConnected, getSigner, loadVaultBalance]);
 
   // Load vault balance when address changes
   useEffect(() => {

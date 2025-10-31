@@ -299,33 +299,49 @@ export class FheContractService {
     return ethers.formatUnits(balance, 6);
   }
 
-  async faucetUSDC(amount: string): Promise<void> {
-    await this.ensureSignerReady();
+  async faucetUSDC(amount: string, signer?: ethers.Signer): Promise<void> {
+    // Use provided signer or try to get one
+    let signerToUse = signer;
+    if (!signerToUse) {
+      await this.ensureSignerReady();
+      signerToUse = this.signer;
+    }
+    if (!signerToUse) {
+      throw new Error('Signer not available. Please connect your wallet.');
+    }
     
     const usdcContract = new ethers.Contract(
       CONTRACT_ADDRESSES.TestUSDC,
       CONTRACT_ABIS.TestUSDC,
-      this.signer
+      signerToUse
     );
     
     const amountWei = ethers.parseUnits(amount, 6);
-    const tx = await usdcContract.faucet(await this.signer.getAddress(), amountWei);
+    const tx = await usdcContract.faucet(await signerToUse.getAddress(), amountWei);
     await tx.wait();
   }
 
-  async approveUSDC(spender: string, amount: string | number): Promise<void> {
-    await this.ensureSignerReady();
+  async approveUSDC(spender: string, amount: string | number, signer?: ethers.Signer): Promise<void> {
+    // Use provided signer or try to get one
+    let signerToUse = signer;
+    if (!signerToUse) {
+      await this.ensureSignerReady();
+      signerToUse = this.signer;
+    }
+    if (!signerToUse) {
+      throw new Error('Signer not available. Please connect your wallet.');
+    }
     
     const usdcContract = new ethers.Contract(
       CONTRACT_ADDRESSES.TestUSDC,
       CONTRACT_ABIS.TestUSDC,
-      this.signer
+      signerToUse
     );
     
     const amountWei = ethers.parseUnits(String(amount), 6);
     const tx = await usdcContract.approve(spender, amountWei);
     await tx.wait();
-    }
+  }
 
   async placeBetWithFHE(
     gameId: number,
@@ -549,17 +565,25 @@ export class FheContractService {
   }
 
   // Vault Functions
-  async depositToVault(amount: string | number): Promise<void> {
-    await this.ensureSignerReady();
+  async depositToVault(amount: string | number, signer?: ethers.Signer): Promise<void> {
+    // Use provided signer or try to get one
+    let signerToUse = signer;
+    if (!signerToUse) {
+      await this.ensureSignerReady();
+      signerToUse = this.signer;
+    }
+    if (!signerToUse) {
+      throw new Error('Signer not available. Please connect your wallet.');
+    }
     
     const contract = new ethers.Contract(
       CONTRACT_ADDRESSES.StadiumVaultBet,
       CONTRACT_ABIS.StadiumVaultBet,
-      this.signer
+      signerToUse
     );
     
     // First approve USDC transfer
-    await this.approveUSDC(CONTRACT_ADDRESSES.StadiumVaultBet, amount);
+    await this.approveUSDC(CONTRACT_ADDRESSES.StadiumVaultBet, amount, signerToUse);
     
     // Deposit to vault
     const amountWei = ethers.parseUnits(String(amount), 6);
@@ -567,13 +591,21 @@ export class FheContractService {
     await tx.wait();
   }
 
-  async withdrawFromVault(amount: string | number): Promise<void> {
-    await this.ensureSignerReady();
+  async withdrawFromVault(amount: string | number, signer?: ethers.Signer): Promise<void> {
+    // Use provided signer or try to get one
+    let signerToUse = signer;
+    if (!signerToUse) {
+      await this.ensureSignerReady();
+      signerToUse = this.signer;
+    }
+    if (!signerToUse) {
+      throw new Error('Signer not available. Please connect your wallet.');
+    }
     
     const contract = new ethers.Contract(
       CONTRACT_ADDRESSES.StadiumVaultBet,
       CONTRACT_ABIS.StadiumVaultBet,
-      this.signer
+      signerToUse
     );
     
     const amountWei = ethers.parseUnits(String(amount), 6);

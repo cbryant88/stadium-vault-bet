@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
 import { fheContractService } from '../lib/fheContractService';
 import { useVault } from '../hooks/useVault';
+import { useEthersSigner } from '../hooks/useEthersSigner';
 
 interface USDCManagerProps {
   onBalanceUpdate?: (balance: string) => void;
@@ -9,6 +10,7 @@ interface USDCManagerProps {
 
 export const USDCManager: React.FC<USDCManagerProps> = ({ onBalanceUpdate }) => {
   const { address } = useAccount();
+  const { getSigner } = useEthersSigner();
   const { vaultBalance, depositToVault, withdrawFromVault, loadVaultBalance, loading: vaultLoading, error: vaultError } = useVault();
   const [userBalance, setUserBalance] = useState<string>('0');
   const [faucetAmount, setFaucetAmount] = useState<string>('100');
@@ -42,19 +44,25 @@ export const USDCManager: React.FC<USDCManagerProps> = ({ onBalanceUpdate }) => 
   };
 
   const handleFaucet = async () => {
-    if (!address) return;
+    if (!address || !getSigner) return;
     
     try {
       setIsLoading(true);
       setError(null);
       
-      await fheContractService.faucetUSDC(faucetAmount);
+      // Get signer from wagmi
+      const signer = await getSigner();
+      if (!signer) {
+        throw new Error('Signer not available');
+      }
+      
+      await fheContractService.faucetUSDC(faucetAmount, signer);
       await loadBalances();
       
       alert(`Successfully claimed ${faucetAmount} USDC!`);
     } catch (err) {
       console.error('Error claiming USDC:', err);
-      setError('Failed to claim USDC');
+      setError(err instanceof Error ? err.message : 'Failed to claim USDC');
     } finally {
       setIsLoading(false);
     }
