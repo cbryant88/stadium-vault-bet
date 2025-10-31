@@ -47,19 +47,115 @@ export interface FHEBet {
 export class FheContractService {
   private provider: ethers.Provider | null = null;
   private signer: ethers.Signer | null = null;
+  private browserProvider: ethers.BrowserProvider | null = null;
+  private initializationPromise: Promise<void> | null = null;
+  private isInitialized = false;
 
   constructor() {
-    this.initializeProvider();
+    // 同步初始化 provider（不需要钱包的读取 provider）
+    this.initializeProviderSync();
   }
 
-  private async initializeProvider() {
-    if (typeof window !== 'undefined' && window.ethereum) {
-      this.provider = new ethers.BrowserProvider(window.ethereum);
-      this.signer = await this.provider.getSigner();
+  private initializeProviderSync() {
+    // 同步初始化读取用的 provider
+    if (!this.provider) {
+      try {
+        const rpcUrl = (import.meta as any)?.env?.VITE_RPC_URL || 'https://1rpc.io/sepolia';
+        this.provider = new ethers.JsonRpcProvider(rpcUrl, undefined, { batchMaxCount: 1 });
+        this.isInitialized = true;
+      } catch (error) {
+        console.error('Failed to initialize provider:', error);
+      }
     }
   }
 
+  private async initializeProvider() {
+    if (this.initializationPromise) return this.initializationPromise;
+    
+    this.initializationPromise = (async () => {
+      // 如果已经初始化了同步 provider，确保它存在
+      if (!this.provider) {
+        this.initializeProviderSync();
+      }
+
+      // 写使用浏览器钱包
+      if (typeof window !== 'undefined' && (window as any).ethereum) {
+        if (!this.browserProvider) {
+          this.browserProvider = new ethers.BrowserProvider((window as any).ethereum);
+        }
+        try {
+          if (!this.signer) {
+            this.signer = await this.browserProvider.getSigner();
+          }
+        } catch (_) {
+          // Signer 可能不可用（钱包未连接），这是正常的
+        }
+      }
+    })();
+    
+    await this.initializationPromise;
+    this.initializationPromise = null;
+  }
+
+  private async ensureInitialized() {
+    // 确保读取 provider 已初始化
+    if (!this.provider) {
+      this.initializeProviderSync();
+    }
+    if (!this.provider) {
+      throw new Error('Provider not initialized');
+    }
+    // 如果需要 signer，尝试初始化
+    if (typeof window !== 'undefined' && !this.browserProvider && (window as any).ethereum) {
+      await this.initializeProvider();
+    }
+  }
+
+  private async ensureSignerReady() {
+    await this.ensureInitialized();
+    if (!this.browserProvider && typeof window !== 'undefined' && (window as any).ethereum) {
+      this.browserProvider = new ethers.BrowserProvider((window as any).ethereum);
+    }
+    if (typeof window !== 'undefined' && (window as any).ethereum?.request) {
+      try { await (window as any).ethereum.request({ method: 'eth_requestAccounts' }); } catch (_) {}
+
+      // 检查当前链并确保为 Sepolia，否则切换/添加
+      try {
+        const net = await (this.browserProvider ?? this.provider)!.getNetwork();
+        const sepoliaHex = '0xaa36a7'; // 11155111
+        if (!net || net.chainId !== 11155111n) {
+          try {
+            await (window as any).ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: sepoliaHex }] });
+          } catch (err: any) {
+            // 4902: 未添加该链，尝试添加后再切换
+            if (err && (err.code === 4902 || err.message?.includes('Unrecognized chain ID'))) {
+              const rpcUrl = (import.meta as any)?.env?.VITE_RPC_URL || 'https://1rpc.io/sepolia';
+              try {
+                await (window as any).ethereum.request({
+                  method: 'wallet_addEthereumChain',
+                  params: [{
+                    chainId: sepoliaHex,
+                    chainName: 'Sepolia',
+                    nativeCurrency: { name: 'Sepolia Ether', symbol: 'ETH', decimals: 18 },
+                    rpcUrls: [rpcUrl],
+                    blockExplorerUrls: ['https://sepolia.etherscan.io']
+                  }]
+                });
+                await (window as any).ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: sepoliaHex }] });
+              } catch (_) {}
+            }
+          }
+        }
+      } catch (_) {}
+    }
+    if (this.browserProvider && !this.signer) {
+      try { this.signer = await this.browserProvider.getSigner(); } catch (_) {}
+    }
+    if (!this.signer) throw new Error('Signer not initialized');
+  }
+
   async getUSDCBalance(userAddress: string): Promise<string> {
+    await this.ensureInitialized();
     if (!this.provider) throw new Error('Provider not initialized');
     
     const usdcContract = new ethers.Contract(
@@ -73,6 +169,7 @@ export class FheContractService {
   }
 
   async getVaultUSDCBalance(): Promise<string> {
+    await this.ensureInitialized();
     if (!this.provider) throw new Error('Provider not initialized');
     
     const stadiumContract = new ethers.Contract(
@@ -86,7 +183,7 @@ export class FheContractService {
   }
 
   async faucetUSDC(amount: string): Promise<void> {
-    if (!this.signer) throw new Error('Signer not initialized');
+    await this.ensureSignerReady();
     
     const usdcContract = new ethers.Contract(
       CONTRACT_ADDRESSES.TestUSDC,
@@ -100,7 +197,7 @@ export class FheContractService {
   }
 
   async approveUSDC(spender: string, amount: string | number): Promise<void> {
-    if (!this.signer) throw new Error('Signer not initialized');
+    await this.ensureSignerReady();
     
     const usdcContract = new ethers.Contract(
       CONTRACT_ADDRESSES.TestUSDC,
@@ -145,8 +242,10 @@ export class FheContractService {
         }
       }
       
-      // Get signer first to get user address
-      const signer = await signerPromise;
+      // Ensure wallet is authorized and signer ready
+      await this.ensureSignerReady();
+      const fallbackSigner = await signerPromise;
+      const signer = this.signer ?? fallbackSigner;
       if (!signer) throw new Error('Signer not available');
       
       console.log('📊 Signer type:', typeof signer);
@@ -299,6 +398,7 @@ export class FheContractService {
   }
 
   async getGameCount(): Promise<number> {
+    await this.ensureInitialized();
     if (!this.provider) throw new Error('Provider not initialized');
     
     try {
@@ -319,6 +419,7 @@ export class FheContractService {
   }
 
   async getBetCount(): Promise<number> {
+    await this.ensureInitialized();
     if (!this.provider) throw new Error('Provider not initialized');
     
     const contract = new ethers.Contract(
@@ -332,7 +433,7 @@ export class FheContractService {
 
   // Vault Functions
   async depositToVault(amount: string | number): Promise<void> {
-    if (!this.signer) throw new Error('Signer not initialized');
+    await this.ensureSignerReady();
     
     const contract = new ethers.Contract(
       CONTRACT_ADDRESSES.StadiumVaultBet,
@@ -350,7 +451,7 @@ export class FheContractService {
   }
 
   async withdrawFromVault(amount: string | number): Promise<void> {
-    if (!this.signer) throw new Error('Signer not initialized');
+    await this.ensureSignerReady();
     
     const contract = new ethers.Contract(
       CONTRACT_ADDRESSES.StadiumVaultBet,
@@ -364,6 +465,7 @@ export class FheContractService {
   }
 
   async getVaultBalance(userAddress: string): Promise<string> {
+    await this.ensureInitialized();
     if (!this.provider) throw new Error('Provider not initialized');
     
     const contract = new ethers.Contract(
@@ -378,6 +480,7 @@ export class FheContractService {
 
   // Get all games from contract
   async getGames(): Promise<FHEGame[]> {
+    await this.ensureInitialized();
     if (!this.provider) throw new Error('Provider not initialized');
     
     try {

@@ -214,7 +214,7 @@ export const BettingSlip = () => {
         </div>
           <div className="mt-2 text-sm text-muted-foreground">
             Your USDC Balance: <span className="font-mono text-green-600">{userUSDCBalance} USDC</span>
-          </div>
+        </div>
       </div>
 
       <div className="p-4 space-y-4">
