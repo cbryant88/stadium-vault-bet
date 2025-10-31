@@ -1,31 +1,25 @@
 import { useAccount, useWalletClient } from 'wagmi';
-import { BrowserProvider, JsonRpcSigner } from 'ethers';
-import { useMemo } from 'react';
+import { BrowserProvider } from 'ethers';
+import { useCallback } from 'react';
 
 export function useEthersSigner() {
-  const { address, isConnected } = useAccount();
+  const { address } = useAccount();
   const { data: walletClient } = useWalletClient();
 
-  const signerPromise = useMemo(async () => {
-    if (!isConnected || !walletClient) {
-      return null;
+  const getSigner = useCallback(async () => {
+    if (!walletClient) {
+      throw new Error('Wallet not connected');
     }
 
-    const { account, chain, transport } = walletClient;
-    const network = {
-      chainId: chain.id,
-      name: chain.name,
-      ensAddress: chain.contracts?.ensRegistry?.address,
-    };
-    const provider = new BrowserProvider(transport, network);
-    const signer = new JsonRpcSigner(provider, account.address);
-    return signer;
-  }, [isConnected, walletClient]);
+    // 类型转换以解决兼容性问题
+    const provider = new BrowserProvider(walletClient as any);
+    return await provider.getSigner();
+  }, [walletClient]); // 依赖 walletClient，避免无限循环
 
   return {
     address,
-    isConnected,
-    signerPromise,
-    walletClient
+    signer: walletClient,
+    isConnected: !!address && !!walletClient,
+    getSigner
   };
 }

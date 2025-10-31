@@ -15,7 +15,7 @@ export interface BettingState {
 export const useBetting = () => {
   const { address, isConnected } = useAccount();
   const { instance, isLoading: fheLoading, error: fheError } = useZamaInstance();
-  const { signerPromise } = useEthersSigner();
+  const { getSigner } = useEthersSigner();
   const { vaultBalance, loadVaultBalance } = useVault();
   const [state, setState] = useState<BettingState>({
     games: [],
@@ -70,7 +70,7 @@ export const useBetting = () => {
       throw new Error('FHE encryption service not ready');
     }
 
-    if (!signerPromise) {
+    if (!getSigner) {
       throw new Error('Wallet signer not available');
     }
 
@@ -82,12 +82,18 @@ export const useBetting = () => {
 
     setState(prev => ({ ...prev, loading: true, error: null }));
     try {
+      // Get signer from wagmi
+      const signer = await getSigner();
+      if (!signer) {
+        throw new Error('Signer not available');
+      }
+      
       const betId = await fheContractService.placeBetWithFHE(
         gameId, 
         amount, 
         teamSelection, 
         instance, 
-        signerPromise,
+        Promise.resolve(signer), // Keep Promise interface for compatibility
         address
       );
       
@@ -118,7 +124,7 @@ export const useBetting = () => {
       }));
       throw error;
     }
-  }, [address, isConnected, instance, signerPromise, loadGames, loadUserBets]);
+  }, [address, isConnected, instance, getSigner, loadGames, loadUserBets, loadVaultBalance, vaultBalance]);
 
   // Get betting pool for a game
   const getBettingPool = useCallback(async (gameId: string) => {

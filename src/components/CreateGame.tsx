@@ -11,7 +11,7 @@ import { Plus, Calendar, Clock, Users } from 'lucide-react';
 
 export const CreateGame: React.FC = () => {
   const { address, isConnected } = useAccount();
-  const { signerPromise } = useEthersSigner();
+  const { getSigner } = useEthersSigner();
   const [isCreating, setIsCreating] = useState(false);
   const [formData, setFormData] = useState({
     homeTeam: '',
@@ -29,7 +29,7 @@ export const CreateGame: React.FC = () => {
   };
 
   const handleCreateGame = async () => {
-    if (!isConnected || !address || !signerPromise) {
+    if (!isConnected || !address || !getSigner) {
       toast({
         title: "Wallet not connected",
         description: "Please connect your wallet to create games.",
@@ -49,7 +49,8 @@ export const CreateGame: React.FC = () => {
 
     setIsCreating(true);
     try {
-      const signer = await signerPromise;
+      // Get signer from wagmi
+      const signer = await getSigner();
       if (!signer) throw new Error('Signer not available');
 
       // Calculate start and end times
