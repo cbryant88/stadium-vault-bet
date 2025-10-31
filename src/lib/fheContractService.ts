@@ -111,6 +111,43 @@ export class FheContractService {
     }
   }
 
+  private async getEthereumProvider(): Promise<any> {
+    if (typeof window === 'undefined') {
+      return null;
+    }
+
+    const win = window as any;
+    
+    // 首先尝试直接访问 window.ethereum
+    if (win.ethereum && typeof win.ethereum.request === 'function') {
+      return win.ethereum;
+    }
+
+    // 如果有多个提供者（多个钱包扩展），尝试找到 MetaMask
+    if (win.ethereum?.providers && Array.isArray(win.ethereum.providers)) {
+      const metamaskProvider = win.ethereum.providers.find(
+        (p: any) => p.isMetaMask && typeof p.request === 'function'
+      );
+      if (metamaskProvider) return metamaskProvider;
+      
+      // 如果没有 MetaMask，返回第一个可用的提供者
+      const firstProvider = win.ethereum.providers.find(
+        (p: any) => typeof p.request === 'function'
+      );
+      if (firstProvider) return firstProvider;
+    }
+
+    // 等待钱包注入（最多等待 2 秒）
+    for (let i = 0; i < 20; i++) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      if (win.ethereum && typeof win.ethereum.request === 'function') {
+        return win.ethereum;
+      }
+    }
+
+    return null;
+  }
+
   private async ensureSignerReady() {
     await this.ensureInitialized();
     
@@ -119,19 +156,20 @@ export class FheContractService {
       throw new Error('Signer requires browser environment');
     }
 
-    // 检查钱包是否可用
-    if (!(window as any).ethereum) {
-      throw new Error('MetaMask or other wallet is not installed. Please install a wallet extension.');
+    // 获取钱包提供者（带等待逻辑）
+    const ethereumProvider = await this.getEthereumProvider();
+    if (!ethereumProvider) {
+      throw new Error('MetaMask or other wallet is not installed. Please install a wallet extension and refresh the page.');
     }
 
     // 创建或获取 browserProvider
     if (!this.browserProvider) {
-      this.browserProvider = new ethers.BrowserProvider((window as any).ethereum);
+      this.browserProvider = new ethers.BrowserProvider(ethereumProvider);
     }
 
     // 请求账户连接（这会弹出 MetaMask 授权窗口）
     try {
-      await (window as any).ethereum.request({ method: 'eth_requestAccounts' });
+      await ethereumProvider.request({ method: 'eth_requestAccounts' });
     } catch (err: any) {
       if (err.code === 4001) {
         throw new Error('Please connect your wallet to continue.');
@@ -145,7 +183,7 @@ export class FheContractService {
       const sepoliaHex = '0xaa36a7'; // 11155111
       if (!net || net.chainId !== 11155111n) {
         try {
-          await (window as any).ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: sepoliaHex }] });
+          await ethereumProvider.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: sepoliaHex }] });
           // 等待网络切换完成
           await new Promise(resolve => setTimeout(resolve, 500));
         } catch (err: any) {
@@ -153,7 +191,7 @@ export class FheContractService {
           if (err && (err.code === 4902 || err.message?.includes('Unrecognized chain ID'))) {
             const rpcUrl = (import.meta as any)?.env?.VITE_RPC_URL || 'https://1rpc.io/sepolia';
             try {
-              await (window as any).ethereum.request({
+              await ethereumProvider.request({
                 method: 'wallet_addEthereumChain',
                 params: [{
                   chainId: sepoliaHex,
@@ -163,7 +201,7 @@ export class FheContractService {
                   blockExplorerUrls: ['https://sepolia.etherscan.io']
                 }]
               });
-              await (window as any).ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: sepoliaHex }] });
+              await ethereumProvider.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: sepoliaHex }] });
               // 等待网络切换完成
               await new Promise(resolve => setTimeout(resolve, 500));
             } catch (addErr: any) {
